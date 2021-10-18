@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/KrakenAdvanced.qml</file>
+        <file>qml/KrakenZ.qml</file>
+        <file>qml/KrakenLiquidControl.qml</file>
+        <file>qml/LCDPreviewDelegate.qml</file>
+    </qresource>
+</RCC>

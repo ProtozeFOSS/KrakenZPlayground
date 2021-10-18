@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/kraken_avatar.png</file>
+        <file>images/NanCat.gif</file>
+        <file>images/Outer Ring.png</file>
+        <file>images/pause.svg</file>
+        <file>images/play.svg</file>
+        <file>images/Droplet.png</file>
+        <file>images/cat.png</file>
+    </qresource>
+</RCC>

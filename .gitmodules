@@ -1,0 +1,3 @@
+[submodule "QtUsb"]
+	path = QtUsb
+	url = https://github.com/ProtozeFOSS/QtUsb.git
