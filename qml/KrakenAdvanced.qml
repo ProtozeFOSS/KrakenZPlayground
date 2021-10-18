@@ -85,6 +85,7 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                KrakenZDriver.clearContentItem();
                 KrakenZDriver.setImage(":/images/cat.png",0);
                 //advancedWindow.imageChosen("qrc:/images/cat.png");
             }
@@ -102,6 +103,7 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                KrakenZDriver.clearContentItem();
                 KrakenZDriver.setImage(":/images/NanCat.gif");
                 //advancedWindow.imageChosen("qrc:/images/NanCat.gif");
             }
@@ -126,6 +128,7 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                KrakenZDriver.clearContentItem();
                 KrakenZDriver.setImage(":/images/Droplet.png");
                 //advancedWindow.imageChosen("qrc:/TrayIcon2.png");
             }

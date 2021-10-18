@@ -70,6 +70,6 @@ Rectangle {
         anchors.centerIn: parent
         height:320
         width:320
-        rotation: -KrakenZDriver.rotationOffset
+        //rotation: -KrakenZDriver.rotationOffset
     }
 }

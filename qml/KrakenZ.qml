@@ -19,7 +19,7 @@ Rectangle {
         anchors{
             left:parent.left
             top:parent.top
-            topMargin: 6
+            topMargin: 4
         }
         leftPadding: 16
         text: "Kraken Z73"
@@ -32,6 +32,9 @@ Rectangle {
         function onPumpDutyChanged(duty){
             setPumpSlider.value = duty;
 
+        }
+        function onBrightnessChanged(brightness){
+            setBrightnessSlider.value = brightness;
         }
 
     }
@@ -75,7 +78,7 @@ Rectangle {
             right:parent.right
             rightMargin:12
             top:deviceName.bottom
-            topMargin: 4
+            topMargin: 2
         }
     }
 
@@ -88,7 +91,7 @@ Rectangle {
         anchors{
             left: parent.left
             top:deviceSeparator.bottom
-            topMargin:4
+            topMargin:2
             leftMargin:4
         }
         text:"Liquid Temperature: "
@@ -109,7 +112,7 @@ Rectangle {
             left: liquidTempLabel.right
             top:deviceSeparator.bottom
             right:parent.right
-            topMargin:3
+            topMargin:1
             leftMargin:4
         }
         text:KrakenZDriver.liquidTemperature.toString().slice(0,5) + " °C";
@@ -126,7 +129,7 @@ Rectangle {
         anchors{
             left: parent.left
             top:liquidTempLabel.bottom
-            topMargin:6
+            topMargin:4
             leftMargin:4
         }
         text:"Pump Speed: "
@@ -146,7 +149,7 @@ Rectangle {
         anchors{
             left: pumpSpeedLabel.right
             top:pumpSpeedLabel.top
-            topMargin:3
+            topMargin:1
             leftMargin:4
         }
         text:KrakenZDriver.pumpSpeed + " RPM";
@@ -162,7 +165,7 @@ Rectangle {
         anchors{
             left: pumpSpeedLabel.left
             top:pumpSpeedLabel.bottom
-            topMargin:4
+            topMargin:2
         }
         text:"Fan Speed: "
         font.family: "Cambria"
@@ -182,7 +185,7 @@ Rectangle {
             left: fanSpeedLabel.right
             top:fanSpeedLabel.top
             right:parent.right
-            topMargin:3
+            topMargin:1
             leftMargin:4
         }
         text:KrakenZDriver.fanSpeed + " RPM";
@@ -198,7 +201,7 @@ Rectangle {
         anchors{
             left: fanSpeedLabel.left
             top:fanSpeedLabel.bottom
-            topMargin:6
+            topMargin:4
         }
         text:"Pump Duty: "
         font.family: "Cambria"
@@ -217,7 +220,7 @@ Rectangle {
         anchors{
             left: pumpDutyLabel.right
             top:pumpDutyLabel.top
-            topMargin:3
+            topMargin:1
             leftMargin:4
         }
         text:KrakenZDriver.pumpDuty + " %";
@@ -233,7 +236,7 @@ Rectangle {
         anchors{
             left: pumpDutyLabel.left
             top:pumpDutyLabel.bottom
-            topMargin:4
+            topMargin:2
         }
         text:"Fan Duty: "
         font.family: "Cambria"
@@ -253,7 +256,7 @@ Rectangle {
             left: fanDutyLabel.right
             top:fanDutyLabel.top
             right:parent.right
-            topMargin:3
+            topMargin:1
             leftMargin:4
         }
         text:KrakenZDriver.fanDuty + " %";
@@ -307,7 +310,7 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                KrakenZDriver.setContent(imageOut,100);
+                KrakenZDriver.setContent(krakenPreview,10);
             }
         }
     }
@@ -353,7 +356,7 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         anchors{
             top: fanDutyValue.bottom
-            topMargin:4
+            topMargin:2
             left: parent.left
         }
         font.pixelSize: 24
@@ -465,7 +468,7 @@ Rectangle {
         anchors{
             top: fanValue.bottom
             left:parent.left
-            topMargin:4
+            topMargin:2
         }
         font.pixelSize: 24
         color:"white"
@@ -563,6 +566,222 @@ Rectangle {
             right:fullFanLabel.right
         }
     }
+    Text{
+        id: setBrightnessLabel
+        text:"Set LCD Brightness"
+        font.family: "Constantia"
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            top: pumpValue.bottom
+            left:parent.left
+            topMargin:2
+        }
+        font.pixelSize: 24
+        color:"white"
+        style: Text.Sunken
+        styleColor: "#737272"
+        font.letterSpacing: 4
+        leftPadding: 8
+    }
+
+    Text{
+        id: zeroBrightnessLabel
+        color:"white"
+        text:"0%"
+        leftPadding:16
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            left: parent.left
+            verticalCenter: setPumpSlider.verticalCenter
+        }
+    }
+
+    Slider{
+        id:setBrightnessSlider
+        anchors{
+            top:setBrightnessLabel.bottom
+            topMargin:2
+            left:zeroBrightnessLabel.right
+            right:fullBrightnessLabel.left
+        }
+        snapMode:Slider.SnapAlways
+        live:true
+        from: 0
+        to: 100
+        stepSize:1
+        handle:Rectangle{
+            color: "#655e71"
+            border.color: "#b9b9b9"
+            border.width: 2
+            height: parent.height * .8
+            width: height
+            radius:width
+            x: setBrightnessSlider.leftPadding + setBrightnessSlider.visualPosition * (setBrightnessSlider.availableWidth - width)
+            y: setBrightnessSlider.topPadding + setBrightnessSlider.availableHeight / 2 - height / 2
+        }
+        background: Rectangle {
+            x: setBrightnessSlider.leftPadding
+            y: setBrightnessSlider.topPadding + setBrightnessSlider.availableHeight / 2 - height / 2
+            implicitWidth: 200
+            implicitHeight: 16
+            width: setBrightnessSlider.availableWidth
+            height: setBrightnessSlider.height *.35
+            radius: 2
+            color: "#e6e6e6"
+            border.width: 2
+            border.color:"#7e7e7e"
+
+            Rectangle {
+                width: setBrightnessSlider.visualPosition * parent.width
+                height: parent.height
+                color: "#cc03d429"
+                radius: 2
+            }
+        }
+
+        onValueChanged: {
+            console.log("Set LCD Brightness: " + value + "%");
+            KrakenZDriver.setBrightness(value);
+        }
+
+        height: 36
+    }
+    Text{
+        id: brightnessValue
+        color:"white"
+        text:setBrightnessSlider.value + "%"
+        font.pixelSize: 16
+        font.bold: true
+        anchors{
+            horizontalCenter: setBrightnessSlider.horizontalCenter
+            top:setBrightnessSlider.bottom
+            topMargin: 2
+        }
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    Text{
+        id: fullBrightnessLabel
+        color:"white"
+        text:"100%"
+        rightPadding:16
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            verticalCenter: setBrightnessSlider.verticalCenter
+            right:fullFanLabel.right
+        }
+    }
+
+    Text{
+        id: setOrientationLabel
+        text:"Set Orientation"
+        font.family: "Constantia"
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            top: brightnessValue.bottom
+            left:parent.left
+            topMargin:2
+        }
+        font.pixelSize: 24
+        color:"white"
+        style: Text.Sunken
+        styleColor: "#737272"
+        font.letterSpacing: 4
+        leftPadding: 8
+    }
+
+    Text{
+        id: leftOrientationLabel
+        color:"white"
+        text:"-180"
+        leftPadding:16
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            left: parent.left
+            verticalCenter: setOrientationSlider.verticalCenter
+        }
+    }
+
+    Slider{
+        id:setOrientationSlider
+        anchors{
+            top:setOrientationLabel.bottom
+            topMargin:2
+            left:leftOrientationLabel.right
+            right:rightOrientationLabel.left
+        }
+        snapMode:Slider.SnapAlways
+        live:true
+        from: -180
+        to: 180
+        stepSize:90
+        value: KrakenZDriver.rotationOffset
+        handle:Rectangle{
+            color: "#655e71"
+            border.color: "#b9b9b9"
+            border.width: 2
+            height: parent.height * .8
+            width: height
+            radius:width
+            x: setOrientationSlider.leftPadding + setOrientationSlider.visualPosition * (setOrientationSlider.availableWidth - width)
+            y: setOrientationSlider.topPadding + setOrientationSlider.availableHeight / 2 - height / 2
+        }
+        background: Rectangle {
+            x: setOrientationSlider.leftPadding
+            y: setOrientationSlider.topPadding + setOrientationSlider.availableHeight / 2 - height / 2
+            implicitWidth: 200
+            implicitHeight: 16
+            width: setOrientationSlider.availableWidth
+            height: setOrientationSlider.height *.35
+            radius: 2
+            color: "#e6e6e6"
+            border.width: 2
+            border.color:"#7e7e7e"
+
+            Rectangle {
+                width: setOrientationSlider.visualPosition * parent.width
+                height: parent.height
+                color: "#cc03d429"
+                radius: 2
+            }
+        }
+
+        onValueChanged: {
+            console.log("Set Orientation: " + value + " degrees");
+            KrakenZDriver.setRotationOffset(value);
+        }
+
+        height: 36
+    }
+    Text{
+        id: orientationValue
+        color:"white"
+        text:setOrientationSlider.value + "%"
+        font.pixelSize: 16
+        font.bold: true
+        anchors{
+            horizontalCenter: setOrientationSlider.horizontalCenter
+            top:setOrientationSlider.bottom
+            topMargin: 2
+        }
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    Text{
+        id: rightOrientationLabel
+        color:"white"
+        text:"180"
+        rightPadding:16
+        horizontalAlignment: Text.AlignHCenter
+        anchors{
+            verticalCenter: setOrientationSlider.verticalCenter
+            right:fullFanLabel.right
+        }
+    }
 
     Text{
         id: detailsText
@@ -575,7 +794,7 @@ Rectangle {
         anchors{
             left:parent.left
             top:krakenPreview.bottom
-            topMargin: -8
+            topMargin: 180
         }
         leftPadding: 12
         text: "Details"
@@ -605,8 +824,8 @@ Rectangle {
         verticalAlignment: Text.AlignBottom
         anchors{
             left:parent.left
-            top:statusSeparator.bottom
-            topMargin: 6
+            bottom:actionsSeparator.bottom
+            bottomMargin: 6
         }
         leftPadding: 16
         text: "Actions"
@@ -620,8 +839,8 @@ Rectangle {
             leftMargin:12
             right:parent.right
             rightMargin:12
-            top:actionsText.bottom
-            topMargin: 4
+            bottom: actionView.top
+            bottomMargin: 4
         }
     }
     ObjectModel{
@@ -744,17 +963,16 @@ Rectangle {
     }
 
     ListView{
+        id: actionView
         anchors{
-            top:actionsSeparator.bottom
             left:parent.left
             right:parent.right
             margins:4
-            leftMargin:120
+            leftMargin:24
+            bottom:parent.bottom
         }
-
-        spacing: 24
-
-
+        height: 72
+        spacing: 42
         orientation: ListView.Horizontal
         model: actionModel
     }
@@ -778,8 +996,4 @@ Rectangle {
         }
     }
 
-    Component.onCompleted: {
-        KrakenZDriver.rotationOffset = -90;
-        //animationTimer.start();
-    }
 }

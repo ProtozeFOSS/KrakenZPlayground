@@ -36,7 +36,6 @@ KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
     mMeasure.setInterval(1000);
     mMeasure.setSingleShot(false);
     connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
-    mMeasure.start();
     mDelayTimer.setTimerType(Qt::PreciseTimer);
     mDelayTimer.setSingleShot(true);
     mDelayTimer.setInterval(50);
@@ -109,14 +108,17 @@ quint16 KrakenZDriver::calculateMemoryStart(quint8 index)
 
 void KrakenZDriver::clearContentItem()
 {
+    mDelayTimer.stop();
     mContent = nullptr;
-    QObject::connect(mLCDIN, &QUsbEndpoint::readyRead, this, &KrakenZDriver::receivedControlResponse);
+    sendWriteFinishBucket(mImageIndex);
+    mLCDCTL->waitForBytesWritten(1000);
+    // mImageIndex ^= 1;
+    mMeasure.stop();
 }
 
 void KrakenZDriver::clearQueuedWrite()
 {
-
-    mLCDIN->readAll();
+    mLCDIN->readAll();    
     mSub = mCMD = NO_TARGET;
 }
 
@@ -128,14 +130,17 @@ void KrakenZDriver::moveToBucket(int bucket)
 
 void KrakenZDriver::prepareNextFrame()
 {
-    mLCDIN->readAll();
     sendWriteFinishBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
-    mLCDIN->readAll();
+    mMeasure.start();
     mImageIndex ^= 1;
     ++mFrames;
-    mResult = mContent->grabToImage(QSize(320,320));
-    connect(mResult.data(), &QQuickItemGrabResult::ready, this, &KrakenZDriver::imageReady);
+    if(mContent){
+        mResult = mContent->grabToImage(QSize(320,320));
+        connect(mResult.data(), &QQuickItemGrabResult::ready, this, &KrakenZDriver::imageReady);
+    }else {
+        mDelayTimer.stop();
+    }
 }
 
 void KrakenZDriver::setFanDuty(quint8 duty)
@@ -149,12 +154,14 @@ void KrakenZDriver::setBrightness(quint8 brightness)
 {
     if(brightness <= 100 && mBrightness != brightness){
         sendBrightness(brightness);
+        mBrightness = brightness;
+        emit brightnessChanged(brightness);
     }
 }
 
 void KrakenZDriver::setPumpDuty(quint8 duty)
 {
-    if(duty <= 100 && mPumpDuty != duty){
+    if(duty >= 20 && duty <= 100 && mPumpDuty != duty){
         sendPumpDuty(duty);
     }
 }
@@ -186,6 +193,7 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     if(image.width() != 320 || image.height() != 320){
         image = image.scaled(320,320);
     }
+    emit imageTransfered(image);
     QTransform rotation;
     rotation.rotate(mRotationOffset);
     image = image.transformed(rotation);
@@ -214,8 +222,6 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
         mImageIndex = index;
         mLCDCTL->waitForBytesWritten(1000);
     }
-    emit imageTransfered(image);
-    mLCDIN->readAll();
 }
 
 void KrakenZDriver::setContent(QQuickItem* content, quint32 frame_delay)
@@ -227,7 +233,6 @@ void KrakenZDriver::setContent(QQuickItem* content, quint32 frame_delay)
         mResult = content->grabToImage(QSize(320,320));
         connect(mResult.data(), &QQuickItemGrabResult::ready, this, &KrakenZDriver::imageReady);
         emit contentChanged(content);
-        QObject::disconnect(mLCDIN, &QUsbEndpoint::readyRead, this, &KrakenZDriver::receivedControlResponse);
     }
 }
 
@@ -267,6 +272,7 @@ void KrakenZDriver::imageReady()
     mLCDDATA->write(reinterpret_cast<const char*>(frame.constBits()), byteCount);
     mLCDDATA->waitForBytesWritten(5000);
     mDelayTimer.start(mFrameDelay);
+    emit imageTransfered(frame);
 }
 
 void KrakenZDriver::updateFrameRate()
