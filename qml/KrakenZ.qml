@@ -272,17 +272,20 @@ Rectangle {
         property int frame:0
         animationImage.onFrameChanged: {
             krakenPreview.grabToImage(function(result) {
-                                       KrakenZDriver.moveToBucket(krakenPreview.frame);
                                        krakenPreview.frame = !krakenPreview.frame
-                                       KrakenZDriver.setImage(result.image, krakenPreview.frame, false);
+                                       KrakenZDriver.setImage(result.image, krakenPreview.frame, true);
                                    });
         }
 
-        onAnimatedChanged: {
-            if(animated){
-                KrakenZDriver.setContent(krakenPreview,1);
+        animationImage.onPlayingChanged: {
+            if( animationImage.playing){
+                KrakenZDriver.startMonitoringFramerate();
             }else {
-                KrakenZDriver.clearContentItem();
+                KrakenZDriver.stopMonitoringFramerate();
+                krakenPreview.grabToImage(function(result) {
+                                           krakenPreview.frame = !krakenPreview.frame
+                                           KrakenZDriver.setImage(result.image, krakenPreview.frame, true);
+                                       });
             }
         }
     }
@@ -291,7 +294,16 @@ Rectangle {
         anchors.centerIn: krakenPreview
         width:320
         height:320
+
         Rectangle{
+            id: lens
+            anchors.fill: parent
+            color:"black"
+            radius:width
+            opacity:0
+        }
+        Rectangle{
+            visible:krakenPreview.animated
             anchors.bottom:parent.bottom
             anchors.bottomMargin: 2
             anchors.horizontalCenter: parent.horizontalCenter
@@ -319,6 +331,7 @@ Rectangle {
         width:48
         height:width
         radius:width
+        visible:krakenPreview.animated
         anchors{
             bottom:krakenPreview.bottom
             right:krakenPreview.right
@@ -481,7 +494,7 @@ Rectangle {
     Text{
         id: zeroPumpLabel
         color:"white"
-        text:"0%"
+        text:"20%"
         leftPadding:16
         horizontalAlignment: Text.AlignHCenter
         anchors{
@@ -500,7 +513,7 @@ Rectangle {
         }
         snapMode:Slider.SnapAlways
         live:false
-        from: 0
+        from: 20
         to: 100
         stepSize:1
         handle:Rectangle{
@@ -534,8 +547,8 @@ Rectangle {
         }
 
         onValueChanged: {
-            console.log("Set Fan Duty: " + value + "%");
-            //KrakenZDriver.setPumpDuty(value);
+            console.log("Set Pump Duty: " + value + "%");
+            KrakenZDriver.setPumpDuty(value);
         }
 
         height: 36
@@ -642,6 +655,18 @@ Rectangle {
 
         onValueChanged: {
             console.log("Set LCD Brightness: " + value + "%");
+            if(value > 50){
+                lens.color = "white";
+                lens.opacity = value/100 - 0.85;
+            } else {
+                lens.color = "black";
+                if(value == 0){
+                    lens.opacity = 1.0;
+                }else {
+                    lens.opacity = (50 - value)/100;
+                }
+            }
+
             KrakenZDriver.setBrightness(value);
         }
 
@@ -917,7 +942,7 @@ Rectangle {
             width:74
             Text{
                 anchors.fill: parent
-                text:"Clear\n(Blackout)"
+                text:"Turn LCD Off"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -927,7 +952,6 @@ Rectangle {
                 anchors.fill: parent
                 onClicked: {
                     KrakenZDriver.setBrightness(0);
-                    KrakenZDriver.blankScreen();
                 }
             }
         }
@@ -947,6 +971,7 @@ Rectangle {
                     }else {
                         KrakenZDriver.setImage(fileUrls[0].toString());
                         krakenPreview.animated = false;
+                        krakenPreview.animationImage.playing = false;
                     }
                 }
                 fileLoader.active = false;
@@ -985,6 +1010,10 @@ Rectangle {
         anchors.top:parent.top
         anchors.topMargin:16
         anchors.bottom: parent.bottom
+        onStopAnimation: {
+            krakenPreview.animated = false;
+            krakenPreview.animationImage.playing = false;
+        }
     }
     Timer{
         id:statusPoll

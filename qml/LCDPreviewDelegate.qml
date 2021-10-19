@@ -4,13 +4,23 @@ import QtGraphicalEffects 1.15
 Rectangle {
     id:background
     property bool animated: false
+    Connections{
+        target: KrakenPreviewImage
+        enabled: !background.animated
+        function onImageReady(){
+            sourceImage.source = ""
+            sourceImage.source = "image://krakenz/buffer"
+        }
+    }
+
     onAnimatedChanged: {
         if(animated){
             opacityMask.source = animatedImage;
             sourceImage.source = ""
         } else {
-            opacityMask.source = sourceImage
+            sourceImage.source = ""
             sourceImage.source = "image://krakenz/buffer"
+            opacityMask.source = sourceImage;
         }
     }
 
@@ -61,12 +71,11 @@ Rectangle {
             font.pixelSize: 24
             color:"white"
         }
-
     }
     OpacityMask{
         id:opacityMask
         maskSource:previewCircle
-        source: animatedImage
+        source: sourceImage
         anchors.centerIn: parent
         height:320
         width:320

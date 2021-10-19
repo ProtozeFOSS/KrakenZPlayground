@@ -6,11 +6,12 @@ Rectangle {
     height: 480
     visible: true
     color:"#4f4848"
+    signal stopAnimation();
     Connections{
         target:KrakenZDriver
         function onUsbMessage(message){
             itemList.append(message);
-            if(itemList.length > 36){
+            if(itemList.length >= 48){
                 console.log("Deleting " + itemList.length - 36 + " items")
                 itemList = itemList.slice(itemList.length-36,36);
             }
@@ -85,9 +86,10 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                advancedWindow.stopAnimation();
                 KrakenZDriver.clearContentItem();
-                KrakenZDriver.setImage(":/images/cat.png",0);
-                //advancedWindow.imageChosen("qrc:/images/cat.png");
+                imageSetTimer.imageSource = ":/images/cat.png";
+                imageSetTimer.start(100);
             }
         }
     }
@@ -99,13 +101,19 @@ Rectangle {
         width:24
         height:24
         color:"red"
-
+        Image{
+            anchors.fill: parent
+            width:32
+            height:32
+            source:"qrc:/images/NanCat.gif"
+        }
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                advancedWindow.stopAnimation();
                 KrakenZDriver.clearContentItem();
-                KrakenZDriver.setImage(":/images/NanCat.gif");
-                //advancedWindow.imageChosen("qrc:/images/NanCat.gif");
+                imageSetTimer.imageSource = ":/images/NanCat.gif";
+                imageSetTimer.start(100);
             }
         }
     }
@@ -128,9 +136,10 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked:{
+                advancedWindow.stopAnimation();
                 KrakenZDriver.clearContentItem();
-                KrakenZDriver.setImage(":/images/Droplet.png");
-                //advancedWindow.imageChosen("qrc:/TrayIcon2.png");
+                imageSetTimer.imageSource = ":/images/Droplet.png";
+                imageSetTimer.start(100);
             }
         }
     }
@@ -162,7 +171,6 @@ Rectangle {
     Component {
         id: errorMessage
         Rectangle{ // Transmission message
-            //height:innerText.paintedHeight + 16 > 64 ? innerText.paintedHeight + 16 : 64
             color:'lightblue'
             radius:12
             anchors.left: parent ?  parent.left : undefined
@@ -693,6 +701,16 @@ Rectangle {
                 width:48
                 height:width;
             }
+        }
+    }
+    Timer{
+        id: imageSetTimer
+        property string imageSource: ""
+        interval:100
+        repeat: false
+        running: false
+        onTriggered: {
+            KrakenZDriver.setImage(imageSource);
         }
     }
 

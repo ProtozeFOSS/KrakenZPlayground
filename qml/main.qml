@@ -9,17 +9,27 @@ Window {
     maximumHeight:720
     maximumWidth: 600
     title: qsTr("KrakenZ Playground")
-
-    KrakenZ{
+    Loader{
         anchors.fill: parent
-        onAdvancedChanged: {
-            if(advanced){
-                window.maximumWidth = 1040
-                window.width = 1040
-            } else {
-                window.width = 600
-                window.maximumWidth = 600
+    active:KrakenZDriver.found
+    sourceComponent: KrakenZ{
+            onAdvancedChanged: {
+                if(advanced){
+                    window.maximumWidth = 1040
+                    window.width = 1040
+                } else {
+                    window.width = 600
+                    window.maximumWidth = 600
+                }
             }
         }
     }
+
+//    UserWarning{
+//        anchors.fill: parent
+//        anchors.margins:8
+//    }
+
+
+
 }

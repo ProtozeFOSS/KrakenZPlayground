@@ -27,47 +27,27 @@ constexpr char ID_RECV[] = "RECEIVED";
 constexpr char ID_MEMORY_START[] = "MEMORY_START";
 constexpr char ID_MEMORY_SLOTS[] = "MEMORY_SLOTS";
 
+constexpr quint8 CRITICAL_TEMP = 59;
 
 KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
-    : QObject(parent), mLCDCTL(nullptr), mLiquidTemp(0), mFanSpeed(0), mPumpSpeed(0), mBrightness(80), mRotationOffset(0),
+    : QObject(parent), mFound(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0), mPumpSpeed(0), mBrightness(80), mRotationOffset(0),
       mCMD(NO_TARGET), mSub(NO_TARGET), mBlocksToWrite(0), mBlocksWritten(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(0),
       mImageTransferState(SELECT_TARGET), mFrames(0), mFrameDelay(0), mFPS(0)
 {
     mMeasure.setInterval(1000);
     mMeasure.setSingleShot(false);
+    mMeasure.setTimerType(Qt::PreciseTimer);
     connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
     mDelayTimer.setTimerType(Qt::PreciseTimer);
     mDelayTimer.setSingleShot(true);
     mDelayTimer.setInterval(50);
     connect(&mDelayTimer, &QTimer::timeout, this, &KrakenZDriver::prepareNextFrame);
-
     QUsb::Config lcdConfig;
     QUsb::Id id;
     id.vid = VID;
     id.pid = PID;
     id.bus = 1;
     id.port = 13;
-
-    // Attempt to find the Kraken device targets
-      QUsb qusb;
-//      qusb.setLogLevel(QUsb::logDebugAll);
-//      qusb.xusb(id, lcdConfig);
-    auto devices = qusb.devices();
-
-//    for(const auto& deviceID: qAsConst(devices))
-//    {
-//        if(deviceID.vid == VID && deviceID.pid == PID && deviceID.endpoints.size() > 0){
-//            qDebug() << "Kraken Found";
-//            qDebug() << deviceID;
-//            for(const auto& configDesc: qAsConst(deviceID.configurations)){
-//                qDebug() << configDesc;
-//            }
-//            for(const auto& endpointDesc: qAsConst(deviceID.endpoints)){
-//                qDebug() << endpointDesc;
-//            }
-
-//        }
-//    }
     mKrakenDevice = new QUsbDevice(this);
     mKrakenDevice->setId(id);
     mKrakenDevice->setConfig(lcdConfig);
@@ -87,6 +67,9 @@ KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
             qDebug() << id << mKrakenDevice->config();
         } else {
             sendStatusRequest();
+            if(mLCDDATA->isOpen()){
+                mFound = true;
+            }
         }
     }else{
         qDebug() << "Failed to open raw usb Kraken device:";
@@ -108,12 +91,16 @@ quint16 KrakenZDriver::calculateMemoryStart(quint8 index)
 
 void KrakenZDriver::clearContentItem()
 {
-    mDelayTimer.stop();
-    mContent = nullptr;
-    sendWriteFinishBucket(mImageIndex);
-    mLCDCTL->waitForBytesWritten(1000);
-    // mImageIndex ^= 1;
-    mMeasure.stop();
+    if(mContent){
+        mContent = nullptr;
+        mDelayTimer.stop();
+        mMeasure.stop();
+        sendSwitchBucket(mImageIndex);
+        mLCDCTL->waitForBytesWritten(1000);
+        mFPS = 0;
+        mFrames = 0;
+        emit fpsChanged(mFPS);
+    }
 }
 
 void KrakenZDriver::clearQueuedWrite()
@@ -132,23 +119,14 @@ void KrakenZDriver::prepareNextFrame()
 {
     sendWriteFinishBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
-    mMeasure.start();
     mImageIndex ^= 1;
     ++mFrames;
     if(mContent){
         mResult = mContent->grabToImage(QSize(320,320));
         connect(mResult.data(), &QQuickItemGrabResult::ready, this, &KrakenZDriver::imageReady);
-    }else {
-        mDelayTimer.stop();
     }
 }
 
-void KrakenZDriver::setFanDuty(quint8 duty)
-{
-    if(duty <= 100 && mFanDuty != duty){
-        sendFanDuty(duty);
-    }
-}
 
 void KrakenZDriver::setBrightness(quint8 brightness)
 {
@@ -159,12 +137,6 @@ void KrakenZDriver::setBrightness(quint8 brightness)
     }
 }
 
-void KrakenZDriver::setPumpDuty(quint8 duty)
-{
-    if(duty >= 20 && duty <= 100 && mPumpDuty != duty){
-        sendPumpDuty(duty);
-    }
-}
 
 void KrakenZDriver::setRotationOffset(int rotation)
 {
@@ -193,10 +165,9 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     if(image.width() != 320 || image.height() != 320){
         image = image.scaled(320,320);
     }
-    emit imageTransfered(image);
     QTransform rotation;
     rotation.rotate(mRotationOffset);
-    image = image.transformed(rotation);
+    auto image_out = image.transformed(rotation);
     if(index == mImageIndex){
         sendSwitchBucket(1,1);
     }
@@ -205,22 +176,24 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     mLCDCTL->waitForBytesWritten(1000);
     sendDeleteBucket(index);
     mLCDCTL->waitForBytesWritten(1000);
-    auto byteCount = image.sizeInBytes();
+    auto byteCount = image_out.sizeInBytes();
     sendSetupBucket(index, index + 1, calculateMemoryStart(index), byteCount/1024);
     mLCDCTL->waitForBytesWritten(1000);
     sendWriteStartBucket(index);
     mLCDCTL->waitForBytesWritten(1000);
     sendBulkDataInfo(2, byteCount);
     mLCDDATA->waitForBytesWritten(2000);
-    mLCDDATA->write(reinterpret_cast<const char*>(image.constBits()), byteCount);
+    mLCDDATA->write(reinterpret_cast<const char*>(image_out.constBits()), byteCount);
     mLCDDATA->waitForBytesWritten(5000);
     sendWriteFinishBucket(index);
     mLCDCTL->waitForBytesWritten(1000);
+    ++mFrames;
     if(applyAfterSet)
     {
         sendSwitchBucket(index);
         mImageIndex = index;
         mLCDCTL->waitForBytesWritten(1000);
+        emit imageTransfered(image);
     }
 }
 
@@ -230,6 +203,9 @@ void KrakenZDriver::setContent(QQuickItem* content, quint32 frame_delay)
         mDelayTimer.setInterval(frame_delay);
         mFrameDelay = frame_delay;
         mContent = content;
+        mFrames = 0;
+        mFPS = 0;
+        mMeasure.start(1000);
         mResult = content->grabToImage(QSize(320,320));
         connect(mResult.data(), &QQuickItemGrabResult::ready, this, &KrakenZDriver::imageReady);
         emit contentChanged(content);
@@ -246,6 +222,22 @@ void KrakenZDriver::setBuiltIn(quint8 index)
     sendSwitchBucket(index,1);
 }
 
+void KrakenZDriver::startMonitoringFramerate()
+{
+    mFrames = 0;
+    mFPS = 0;
+    emit fpsChanged(mFPS);
+    mMeasure.start(1000);
+}
+
+void KrakenZDriver::stopMonitoringFramerate()
+{
+    mMeasure.stop();
+    mFrames = 0;
+    mFPS = 0;
+    emit fpsChanged(mFPS);
+}
+
 void KrakenZDriver::imageReady()
 {
     auto frame = mResult->image();
@@ -255,21 +247,21 @@ void KrakenZDriver::imageReady()
     frame.convertTo(QImage::Format_RGBA8888);
     QTransform rotation;
     rotation.rotate(mRotationOffset);
-    frame = frame.transformed(rotation);
+    auto frame_out = frame.transformed(rotation);
     sendSwitchBucket(mImageIndex ^ 1);
     mLCDCTL->waitForBytesWritten(1000);
     sendQueryBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendDeleteBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
-    auto byteCount = frame.sizeInBytes();
+    auto byteCount = frame_out.sizeInBytes();
     sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , byteCount/1024);
     mLCDCTL->waitForBytesWritten(1000);
     sendWriteStartBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendBulkDataInfo(2, byteCount);
     mLCDDATA->waitForBytesWritten(2000);
-    mLCDDATA->write(reinterpret_cast<const char*>(frame.constBits()), byteCount);
+    mLCDDATA->write(reinterpret_cast<const char*>(frame_out.constBits()), byteCount);
     mLCDDATA->waitForBytesWritten(5000);
     mDelayTimer.start(mFrameDelay);
     emit imageTransfered(frame);
@@ -661,7 +653,7 @@ void KrakenZDriver::sendBulkDataInfo(quint8 mode, quint32 size)
     bulk_info[17] = 0x40;
     bulk_info[18] = 0x96;
     //qDebug() << "Bulk Info: " << bulk_info.left(20).toHex();
-    mLCDDATA->write(bulk_info,512);
+    mLCDDATA->write(bulk_info);
 }
 
 void KrakenZDriver::sendBrightness(quint8 brightness)
@@ -676,35 +668,255 @@ void KrakenZDriver::sendBrightness(quint8 brightness)
 
 }
 
-void KrakenZDriver::sendFanDuty(quint8 duty)
+void KrakenZDriver::setFanDuty(quint8 duty)
 {
-    QByteArray request_set_duty;
-    request_set_duty.fill(0x0, _WRITE_LENGTH);
-    request_set_duty[0] = SET_DUTY;
-    request_set_duty[1] = 0x02; // FAN ADDRESS
-    request_set_duty[4] = 0; // Critical Temp
-    request_set_duty[5] = duty; // duty
-    request_set_duty[6] = 59; // Critical Temp
-    request_set_duty[7] = duty; // duty
-    mLCDCTL->write(request_set_duty);
+    if(duty >= 0 && duty <= 100){
+        QByteArray set_set_fan;
+        set_set_fan.fill(0x0, _WRITE_LENGTH);
+        set_set_fan[0] = SET_DUTY;
+        set_set_fan[1] = FAN_CHANNEL;
+        if(duty != 0){
+            set_set_fan[4] = duty;
+            set_set_fan[5] = duty;
+            set_set_fan[6] = duty;
+            set_set_fan[7] = duty;
+            set_set_fan[8] = duty;
+            set_set_fan[9] = duty;
+            set_set_fan[10] = duty;
+            set_set_fan[11] = duty;
+            set_set_fan[12] = duty;
+            set_set_fan[13] = duty;
+            set_set_fan[14] = duty;
+            set_set_fan[15] = duty;
+            set_set_fan[16] = duty;
+            set_set_fan[17] = duty;
+            set_set_fan[18] = duty;
+            set_set_fan[19] = duty;
+            set_set_fan[20] = duty;
+            set_set_fan[21] = duty;
+            set_set_fan[22] = duty;
+            set_set_fan[23] = duty;
+            set_set_fan[24] = duty;
+            set_set_fan[25] = duty;
+            set_set_fan[26] = duty;
+            set_set_fan[27] = duty;
+            set_set_fan[28] = duty;
+            set_set_fan[29] = duty;
+            set_set_fan[30] = duty;
+            set_set_fan[31] = duty;
+            set_set_fan[32] = duty;
+            set_set_fan[33] = duty;
+            set_set_fan[34] = duty;
+            set_set_fan[35] = duty;
+            set_set_fan[36] = duty;
+            set_set_fan[37] = duty;
+            set_set_fan[38] = duty;
+            set_set_fan[39] = duty;
+            set_set_fan[40] = duty;
+            set_set_fan[41] = duty;
+            set_set_fan[42] = duty;
+            set_set_fan[43] = duty;
+        }
+        mLCDCTL->write(set_set_fan);
+        mLCDCTL->waitForBytesWritten(1000);
+    }
 }
 
-void KrakenZDriver::sendPumpDuty(quint8 duty)
+void KrakenZDriver::setPumpDuty(quint8 duty)
 {
-    QByteArray request_set_duty;
-    request_set_duty.fill(0x0, _WRITE_LENGTH);
-    request_set_duty[0] = SET_DUTY;
-    request_set_duty[1] = 0x01; // PUMP ADDRESS
-    request_set_duty[4] = 0; // Critical Temp
-    request_set_duty[5] = duty; // duty
-    request_set_duty[6] = 59; // Critical Temp
-    request_set_duty[7] = duty; // duty
-    mLCDCTL->write(request_set_duty);
+    if(duty >= 20 && duty <= 100){
+        QByteArray set_pump;
+        set_pump.fill(0x0, _WRITE_LENGTH);
+        set_pump[0] = SET_DUTY;
+        set_pump[1] = PUMP_CHANNEL;
+        set_pump[4] = duty;
+        set_pump[5] = duty;
+        set_pump[6] = duty;
+        set_pump[7] = duty;
+        set_pump[8] = duty;
+        set_pump[9] = duty;
+        set_pump[10] = duty;
+        set_pump[11] = duty;
+        set_pump[12] = duty;
+        set_pump[13] = duty;
+        set_pump[14] = duty;
+        set_pump[15] = duty;
+        set_pump[16] = duty;
+        set_pump[17] = duty;
+        set_pump[18] = duty;
+        set_pump[19] = duty;
+        set_pump[20] = duty;
+        set_pump[21] = duty;
+        set_pump[22] = duty;
+        set_pump[23] = duty;
+        set_pump[24] = duty;
+        set_pump[25] = duty;
+        set_pump[26] = duty;
+        set_pump[27] = duty;
+        set_pump[28] = duty;
+        set_pump[29] = duty;
+        set_pump[30] = duty;
+        set_pump[31] = duty;
+        set_pump[32] = duty;
+        set_pump[33] = duty;
+        set_pump[34] = duty;
+        set_pump[35] = duty;
+        set_pump[36] = duty;
+        set_pump[37] = duty;
+        set_pump[38] = duty;
+        set_pump[39] = duty;
+        set_pump[40] = duty;
+        set_pump[41] = duty;
+        set_pump[42] = duty;
+        set_pump[43] = duty;
+        mLCDCTL->write(set_pump);
+        mLCDCTL->waitForBytesWritten(1000);
+    }
 }
 
-void KrakenZDriver::sendSetSpeedProfile(quint8 channel, quint8 profile, quint16 speed, bool direction)
+
+void generate_normalized_profile(QList<TempPoint> &normalized, const QList<TempPoint>& profile, quint8 max_first)
 {
-    //TODO: Add set speed profile
+    if(profile.size() == 0){
+        normalized.clear();
+        return;
+    }
+    int c_index = 0;
+    qDebug() << "Profile : ";
+    QList<TempPoint> lower;
+    int l_high_temp(max_first/2);
+    int l_low_temp(l_high_temp);
+    QList<TempPoint> upper;
+    int u_low_temp(max_first/2+1);
+    int u_high_temp(u_low_temp);
+//    normalized.reserve(profile.size());
+    auto length = profile.size();
+    for(c_index = 0; c_index < length; ++c_index){
+        auto tempPoint = profile.at(c_index);
+        if(tempPoint.temp <= l_low_temp){ // lowest
+            l_low_temp = tempPoint.temp;
+            lower.prepend(tempPoint);
+        }else if(tempPoint.temp < u_low_temp){ // in lower
+            if(tempPoint.temp >= l_high_temp){ // highest of the lows
+                lower.append(tempPoint);
+                l_high_temp = tempPoint.temp;
+            } else { // insert in lower
+                // find insert point
+                for(int i(lower.size()-1); i >= 0; --i ){
+                    const auto cmp = lower.at(i);
+                    if(i == 0){
+                        lower.insert(0,tempPoint);
+                        l_low_temp = tempPoint.temp;
+                        break;
+                    }else if(cmp.temp >= tempPoint.temp){
+                        lower.insert(i,tempPoint);
+                        break;
+                    }
+                }
+            }
+        }else if(tempPoint.temp >= u_high_temp){ // found highest
+            upper.append(tempPoint);
+            u_high_temp = tempPoint.temp;
+        } else{ // insert in higher
+            auto u_length = upper.size();
+            for(int i(0); i < u_length; ++i ){
+                const auto cmp = lower.at(i);
+                if(cmp.temp <= tempPoint.temp){
+                    upper.insert(i,tempPoint);
+                    break;
+                }
+            }
+        }
+    }
+    normalized = lower;
+    normalized += upper;
+    qDebug() << "Sorted By Temp: ";
+    c_index = 0;
+    for(auto const& point: normalized){
+        qDebug("[%d] -> temp:%d , point:%d" , c_index++, point.temp, point.point);
+    }
+    // final pass makes sure there are not duplicate temps, if a duplicate is found, it will be set to the average of the next two points
+    // if it is the last point, set it to an avg of max and current
+    length = normalized.length();
+    auto last_temp = normalized.at(0).temp;
+    auto items_remain = length;
+    for(c_index = 1; c_index < length; ++c_index){
+        auto point = normalized.at(c_index);
+        if(last_temp >= point.temp){
+            if(c_index == length-1){
+                point.temp = ((point.temp + max_first)/2) - 1;
+            }else {
+                point.temp = (point.temp + last_temp)/2 -1;
+            }
+            normalized[c_index] = point;
+        }
+        last_temp = point.temp;
+        if(last_temp == max_first){
+            items_remain = c_index+1;
+        }
+    }
+    if(items_remain != normalized.size()){
+        for(int size = normalized.size(); size > items_remain; --size){
+            normalized.pop_back();
+        }
+    }
+    auto last_point = normalized.at(0).point;
+    length = normalized.size();
+    items_remain = length;
+    for(c_index = 1; c_index < length; ++c_index){
+        auto point = normalized.at(c_index);
+        if(last_point >= point.point){
+            if(c_index == length-1){
+                point.point = ((point.point + 100)/2) + 1;
+            }else {
+                auto& previous = normalized[c_index-1];
+                previous.point = (point.point + last_point)/2 -1;
+                point.point = last_point;
+            }
+            normalized[c_index] = point;
+        }
+        last_point = point.point;
+        if(last_point == 100){
+            items_remain = c_index+1;
+        }
+    }
+    if(items_remain != normalized.size()){
+        for(int size = normalized.size(); size > items_remain; --size){
+            normalized.pop_back();
+        }
+    }
+    qDebug() << "Normalized: ";
+    c_index = 0;
+    for(auto const& point: normalized){
+        qDebug("[%d] -> temp:%d , point:%d" , c_index++, point.temp, point.point);
+    }
+}
+
+void KrakenZDriver::sendSetDutyProfile(quint8 channel, const QList<TempPoint>& profile)
+{
+    QList<TempPoint> profile_out;
+    QList<TempPoint> test;
+    test.append(TempPoint(30,40));
+    test.append(TempPoint(25,25));
+    test.append(TempPoint(35,30));
+    test.append(TempPoint(40,35));
+    test.append(TempPoint(40,80));
+    generate_normalized_profile(profile_out, test, 60);
+    test.clear();
+    test << TempPoint(30,40) << TempPoint(25,25) << TempPoint(35,30) << TempPoint(40,100);
+    generate_normalized_profile(profile_out, test, 60);
+    test.clear();
+    test << TempPoint(30,40) << TempPoint(25,25) << TempPoint(35,100) << TempPoint(40,100);
+    generate_normalized_profile(profile_out, test, 60);
+    QByteArray request_set_duty;
+//    request_set_duty.fill(0x0, _WRITE_LENGTH);
+//    request_set_duty[0] = SET_DUTY;
+//    request_set_duty[1] = channel;
+//    request_set_duty[4] = 0;
+//    request_set_duty[5] = duty; // duty
+//    request_set_duty[6] = 59; // Critical Temp
+//    request_set_duty[7] = duty; // duty
+//    mLCDCTL->write(request_set_duty);
 }
 
 
@@ -874,10 +1086,7 @@ void KrakenZDriver::receivedControlResponse()
    auto data = mLCDIN->readAll();
    if(data.size() == 0)
        return;
-   auto CMD = quint32(data[0]);
-//   CMD += quint32(data[1]);
-//   CMD += quint32(data[2]);
-//   CMD += quint32(data[3]);
+   auto CMD = quint8(data[0]);
    switch(CMD){
        case RESPONSE_VERSION:
        {

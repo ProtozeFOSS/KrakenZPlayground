@@ -11,10 +11,18 @@
 class QQuickItemGrabResult;
 
 class QUsbDevice;
+struct  TempPoint{
+    quint8  temp;
+    quint8  point;
+    TempPoint(quint8 temp, quint8 point) : temp(temp), point(point){}
+    TempPoint(const TempPoint& rhs) : temp(rhs.temp), point(rhs.point){}
+    TempPoint& operator=(const TempPoint&)= default;
+};
+
 class KrakenZDriver : public QObject
 {
     Q_OBJECT
-
+    Q_PROPERTY( bool  found READ found NOTIFY foundChanged MEMBER mFound)
     Q_PROPERTY( qreal liquidTemperature READ liquidTemperature NOTIFY liquidTemperatureChanged MEMBER mLiquidTemp)
     Q_PROPERTY( quint16 pumpSpeed READ pumpSpeed NOTIFY pumpSpeedChanged MEMBER mPumpSpeed)
     Q_PROPERTY( quint16 fanSpeed READ fanSpeed NOTIFY fanSpeedChanged MEMBER mFanSpeed)
@@ -40,6 +48,7 @@ public:
     int     rotationOffset() { return mRotationOffset; }
     QQuickItem* content() { return mContent; }
     qreal fps() { return mFPS; }
+    bool found() { return mFound; }
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
@@ -74,10 +83,15 @@ public:
         SEND_WRITE_FINISH,
         SEND_SWITCH
     };
+    enum CHANNELS{
+        PUMP_CHANNEL = 0x1,
+        FAN_CHANNEL = 0x2
+    };
 
     Q_ENUM(WriteTarget)
 
 signals:
+    void foundChanged(bool found);
     void fpsChanged(qreal fps);
     void contentChanged(QQuickItem* content);
     void liquidTemperatureChanged(qreal temperature);
@@ -94,12 +108,14 @@ signals:
     void imageTransfered(QImage frame);
 
 public slots:
+    void startMonitoringFramerate();
+    void stopMonitoringFramerate();
     void setContent(QQuickItem* content, quint32 frame_delay = 50);
     void clearContentItem();
     void setRotationOffset(int rotation);
     void setBrightness(quint8 brightness);
     void setFanDuty(quint8 duty);
-    void setPumpDuty(quint8 duty);
+    void setPumpDuty(quint8 duty); // flat
     void setImage(QString filepath, quint8 index = 0, bool applyAfterSet = true);
     void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true);
     void sendStatusRequest();
@@ -144,13 +160,14 @@ protected:
     void sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot, quint16 memory_slot_count);
     void sendWriteStartBucket(quint8 index);
     void sendWriteFinishBucket(quint8 index);
-    void sendSetSpeedProfile(quint8 channel, quint8 profile, quint16 speed, bool direction = false);
+    void sendSetDutyProfile(quint8 channel, const QList<TempPoint>& profile);
     void sendFWRequest();
     // Bulk Transfers
     void sendBulkDataInfo(quint8 mode = 2, quint32 size = 3276800);
     // cache mechanism
     void sendQueuedWrite();
 
+    bool           mFound;
     QUsbDevice*    mKrakenDevice; // Single composite usb device handle
     QUsbEndpoint*  mLCDDATA;
     QUsbEndpoint*  mLCDCTL;
