@@ -108,6 +108,7 @@ signals:
     void imageTransfered(QImage frame);
 
 public slots:
+    void initialize();
     void startMonitoringFramerate();
     void stopMonitoringFramerate();
     void setContent(QQuickItem* content, quint32 frame_delay = 50);
@@ -132,10 +133,7 @@ protected slots:
     void updateFrameRate();
 
 protected:
-
-    // utility functions
-    void clearQueuedWrite();
-
+#ifdef DEVELOPER_MODE
     void printQueryBucket(QByteArray & data);
     void printConfigBucket(QByteArray & data);
     void printSetupBucket(QByteArray & data);
@@ -143,13 +141,14 @@ protected:
     void printSwitchBucket(QByteArray & data);
     void printFWRequest(QByteArray & data);
     void printStatusRequest(QByteArray & data);
-
+    void parseResponseMessage(QByteArray& data);
+#endif
     void parseFWVersion(QByteArray& data);
     void parseStatus(QByteArray& data);
-    void parseResponseMessage(QByteArray& data);
     void parseDeleteBucket(QByteArray& data);
 
     // Control messages
+    void sendFWRequest();
     void sendBrightness(quint8 brightness);
     void sendFanDuty(quint8 duty);
     void sendPumpDuty(quint8 duty);
@@ -161,13 +160,12 @@ protected:
     void sendWriteStartBucket(quint8 index);
     void sendWriteFinishBucket(quint8 index);
     void sendSetDutyProfile(quint8 channel, const QList<TempPoint>& profile);
-    void sendFWRequest();
-    // Bulk Transfers
+
+    // Bulk Transfer CTRL Message
     void sendBulkDataInfo(quint8 mode = 2, quint32 size = 3276800);
-    // cache mechanism
-    void sendQueuedWrite();
 
     bool           mFound;
+    bool           mInitialized;
     QUsbDevice*    mKrakenDevice; // Single composite usb device handle
     QUsbEndpoint*  mLCDDATA;
     QUsbEndpoint*  mLCDCTL;
@@ -184,19 +182,11 @@ protected:
     quint8  mBrightness;
     int     mRotationOffset; // lcd rotation offset
 
-
-    WriteTarget mCMD;
-    WriteTarget mSub;
-    QByteArray  mQueuedData;
-    quint32     mBlocksToWrite; // 512 Byte blocks
-    quint32     mBlocksWritten;
-
     // Write Buffer
     QQuickItem*         mContent;
     QSharedPointer<QQuickItemGrabResult> mResult;
     short               mBufferIndex; // buffer index
     short               mImageIndex; // bucket id
-    ImageTransferState  mImageTransferState;
     QTimer              mMeasure;
     short               mFrames;
     quint32             mFrameDelay;

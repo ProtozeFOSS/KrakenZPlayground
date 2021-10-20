@@ -10,9 +10,9 @@ CONFIG += c++11
 #           ENUM_DEBUG
 
 SOURCES += \
+        krakenappcontroller.cpp \
         krakenimageprovider.cpp \
         krakenzdriver.cpp \
-        lcdpreview.cpp \
         main.cpp
 
 RESOURCES += qml.qrc \
@@ -32,6 +32,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    krakenappcontroller.h \
     krakenimageprovider.h \
-    krakenzdriver.h \
-    lcdpreview.h
+    krakenzdriver.h
+
+DISTFILES += \
+    examples/Monitor/Monitor.qml

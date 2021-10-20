@@ -23,10 +23,7 @@ void KrakenImageProvider::imageChanged(QImage frame)
 
 QImage KrakenImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
-    qDebug() << "Image Requested: " << id;
-
     if(requestedSize.height() > 0 && (requestedSize.height() != 320 || requestedSize.width() != 320)){
-        qDebug() << "Requesting scaled";
         if(size){
             *size = requestedSize;
         }

@@ -6,5 +6,6 @@
         <file>qml/KrakenLiquidControl.qml</file>
         <file>qml/LCDPreviewDelegate.qml</file>
         <file>qml/UserWarning.qml</file>
+        <file>qml/TestQmlApp.qml</file>
     </qresource>
 </RCC>

@@ -8,7 +8,6 @@
 #include <QImageReader>
 #include <QQuickItemGrabResult>
 #include <QGuiApplication>
-//#include <qusbcompositedevice.h>
 const int _WRITE_LENGTH = 64;
 const int _WRITE_BULK_LENGTH = 512;
 const quint16 _MAX_MEMORY_SLOTS = 53255;
@@ -29,53 +28,31 @@ constexpr char ID_MEMORY_SLOTS[] = "MEMORY_SLOTS";
 
 constexpr quint8 CRITICAL_TEMP = 59;
 
-KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
-    : QObject(parent), mFound(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0), mPumpSpeed(0), mBrightness(80), mRotationOffset(0),
-      mCMD(NO_TARGET), mSub(NO_TARGET), mBlocksToWrite(0), mBlocksWritten(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(0),
-      mImageTransferState(SELECT_TARGET), mFrames(0), mFrameDelay(0), mFPS(0)
+union CHANNEL_SPEED
 {
-    mMeasure.setInterval(1000);
-    mMeasure.setSingleShot(false);
-    mMeasure.setTimerType(Qt::PreciseTimer);
-    connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
-    mDelayTimer.setTimerType(Qt::PreciseTimer);
-    mDelayTimer.setSingleShot(true);
-    mDelayTimer.setInterval(50);
-    connect(&mDelayTimer, &QTimer::timeout, this, &KrakenZDriver::prepareNextFrame);
-    QUsb::Config lcdConfig;
-    QUsb::Id id;
-    id.vid = VID;
-    id.pid = PID;
-    id.bus = 1;
-    id.port = 13;
-    mKrakenDevice = new QUsbDevice(this);
-    mKrakenDevice->setId(id);
-    mKrakenDevice->setConfig(lcdConfig);
-    if(mKrakenDevice->open() ==  QUsb::statusOK)
-    {
-        mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 2);
-        if(!mLCDDATA->open(QIODevice::WriteOnly)){
-            qDebug() << "Error opening Bulk write endpoint: " <<  mLCDDATA->errorString();
-            qDebug() << id << mKrakenDevice->config();
-        }
-        mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 1); // Write
-        mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 129); // Read
-        connect(mLCDIN, &QUsbEndpoint::readyRead, this, &KrakenZDriver::receivedControlResponse);
-        mLCDIN->setPolling(true);
-        if(!mLCDCTL->open(QIODevice::WriteOnly) ||  !mLCDIN->open(QIODevice::ReadOnly)){
-            qDebug() << "Failed to open control endpoints: " << mLCDIN->errorString() << " : " << mLCDCTL->errorString();
-            qDebug() << id << mKrakenDevice->config();
-        } else {
-            sendStatusRequest();
-            if(mLCDDATA->isOpen()){
+    quint16  value;
+    quint8   data[2];
+};
+
+KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
+    : QObject(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
+      mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(0), mFrames(0), mFrameDelay(0), mFPS(0)
+{
+    QUsb usb;
+    auto devices = usb.devices();
+    for(const auto& device: qAsConst(devices)){
+        if(device.vid == VID && device.pid == PID){
+            if(device.configCount > 0){
+                auto config = device.configurations[0];
+                mKrakenDevice = new QUsbDevice(this);
+                QUsb::Id id(PID,VID,device.bus,device.port);
+                mKrakenDevice->setId(id);
+                config.interface = -1; // claim all interfaces
+                mKrakenDevice->setConfig(config);
                 mFound = true;
             }
         }
-    }else{
-        qDebug() << "Failed to open raw usb Kraken device:";
-        qDebug() << id << mKrakenDevice->config();
     }
-
 }
 
 void KrakenZDriver::blankScreen()
@@ -95,20 +72,51 @@ void KrakenZDriver::clearContentItem()
         mContent = nullptr;
         mDelayTimer.stop();
         mMeasure.stop();
-        sendSwitchBucket(mImageIndex);
-        mLCDCTL->waitForBytesWritten(1000);
         mFPS = 0;
         mFrames = 0;
+        emit contentChanged(nullptr);
         emit fpsChanged(mFPS);
     }
 }
 
-void KrakenZDriver::clearQueuedWrite()
+void KrakenZDriver::initialize()
 {
-    mLCDIN->readAll();    
-    mSub = mCMD = NO_TARGET;
-}
+    if(mFound && !mInitialized){
+        mMeasure.setInterval(1000);
+        mMeasure.setSingleShot(false);
+        mMeasure.setTimerType(Qt::PreciseTimer);
+        connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
+        mDelayTimer.setTimerType(Qt::PreciseTimer);
+        mDelayTimer.setSingleShot(true);
+        mDelayTimer.setInterval(50);
+        connect(&mDelayTimer, &QTimer::timeout, this, &KrakenZDriver::prepareNextFrame);
+        if(mKrakenDevice->open() ==  QUsb::statusOK)
+        {
+            mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 2);
+            if(!mLCDDATA->open(QIODevice::WriteOnly)){
+                qDebug() << "Error opening Bulk write endpoint: " <<  mLCDDATA->errorString();
+                qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
+            }
+            mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 1); // Write
+            mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 129); // Read
+            connect(mLCDIN, &QUsbEndpoint::readyRead, this, &KrakenZDriver::receivedControlResponse);
+            mLCDIN->setPolling(true);
+            if(!mLCDCTL->open(QIODevice::WriteOnly) ||  !mLCDIN->open(QIODevice::ReadOnly)){
+                qDebug() << "Failed to open control endpoints: " << mLCDIN->errorString() << " : " << mLCDCTL->errorString();
+                qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
+            } else {
+                sendStatusRequest();
+                if(mLCDDATA->isOpen()){
+                    mInitialized = true;
+                }
+            }
+        }else{
+            qDebug() << "Failed to open raw usb Kraken device:";
+            qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
+        }
+    }
 
+}
 void KrakenZDriver::moveToBucket(int bucket)
 {
     sendSwitchBucket(bucket);
@@ -130,9 +138,9 @@ void KrakenZDriver::prepareNextFrame()
 
 void KrakenZDriver::setBrightness(quint8 brightness)
 {
-    if(brightness <= 100 && mBrightness != brightness){
-        sendBrightness(brightness);
+    if(brightness >= 0 && brightness <= 100 && mBrightness != brightness){
         mBrightness = brightness;
+        sendBrightness(brightness);
         emit brightnessChanged(brightness);
     }
 }
@@ -305,32 +313,27 @@ void KrakenZDriver::parseStatus(QByteArray &data)
     if(data.size() >= 30)
     {
         //qDebug() << "Status: " << data.toHex();
-        auto temp(qreal(float(data[15]) + float(data[16]) / 10));
+        qreal temp(float(data[15]) + float(data[16]) / 10);
         if(temp != mLiquidTemp){
             mLiquidTemp = temp;
             emit liquidTemperatureChanged(mLiquidTemp);
         }
-        QByteArray speed_data;
-        speed_data.reserve(2);
-        speed_data[0] = data[18];
-        speed_data[1] = data[17];
-        auto converted(false);
-        quint16 pump_speed = speed_data.toHex().toUInt(&converted, 16);
-        if(pump_speed != mPumpSpeed){
-            mPumpSpeed = pump_speed;
+        CHANNEL_SPEED speed;
+        speed.data[0] = data[17];
+        speed.data[1] = data[18];
+        if(speed.value != mPumpSpeed){
+            mPumpSpeed = speed.value;
             emit pumpSpeedChanged(mPumpSpeed);
         }
-        auto pump_duty((quint8(data[19])));
+        quint8 pump_duty(data[19]);
         if(pump_duty != mPumpDuty){
             mPumpDuty = pump_duty;
             emit pumpDutyChanged(mPumpDuty);
         }
-
-        speed_data[0] = data[24];
-        speed_data[1] = data[23];
-        quint16 fan_speed(speed_data.toHex().toUInt(&converted,16));
-        if(fan_speed != mFanSpeed){
-            mFanSpeed = fan_speed;
+        speed.data[0] = data[23];
+        speed.data[1] = data[24];
+        if(speed.value != mFanSpeed){
+            mFanSpeed = speed.value;
             emit fanSpeedChanged(mFanSpeed);
         }
         auto fan_duty((quint8(data[25])));
@@ -338,11 +341,6 @@ void KrakenZDriver::parseStatus(QByteArray &data)
             mFanDuty = fan_duty;
             emit fanDutyChanged(mFanDuty);
         }
-        qDebug() << "Liquid temperature " << mLiquidTemp << "°C";
-        qDebug() << "Pump speed " << mPumpSpeed  << "rpm";
-        qDebug() << "Pump duty " << mPumpDuty << "%";
-        qDebug() << "Fan speed " << mFanSpeed << "rpm";
-        qDebug() << "Fan duty " << mFanDuty << "%";
 #ifdef DEVELOPER_MODE
         QJsonObject response;
         auto CMD = quint32(data[0]);;
@@ -360,13 +358,12 @@ void KrakenZDriver::parseStatus(QByteArray &data)
         response.insert(ID_RECV, true);
         emit usbMessage(response);
 #endif
-        //emit recievedFWVersion(mVersion);
     }
 }
 
+#ifdef DEVELOPER_MODE
 void KrakenZDriver::printConfigBucket(QByteArray &data)
 {
-#ifdef DEVELOPER_MODE
     QJsonObject response;
     response.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
     response.insert(ID_TARGET, QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD));
@@ -381,10 +378,9 @@ void KrakenZDriver::printConfigBucket(QByteArray &data)
     response.insert(ID_VALID, true);
     response.insert(ID_RECV, false);
     emit usbMessage(response);
-#endif
     qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
     qDebug() << "RAW: " << data.toHex();
-    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD);
+    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(C);
     qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
     qDebug() << "magic_2:" << data.mid(2,12).toHex() << ",";
     qDebug() << "bucket_id:" << data.mid(14,1).toHex() << ",";
@@ -397,7 +393,6 @@ void KrakenZDriver::printConfigBucket(QByteArray &data)
 
 void KrakenZDriver::printFWRequest(QByteArray &data)
 {
-#ifdef DEVELOPER_MODE
     QJsonObject response;
     response.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
     response.insert(ID_TARGET, QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD));
@@ -410,57 +405,12 @@ void KrakenZDriver::printFWRequest(QByteArray &data)
     response.insert(ID_VALID, true);
     response.insert(ID_RECV, false);
     emit usbMessage(response);
-#endif
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
 
-void KrakenZDriver::sendQueuedWrite()
-{
-    // switch on the queued type and sub type
-    if(quint8(mQueuedData[0]) == 0) {
-        return;
-    }
-    auto CMD = WriteTarget(quint8(mQueuedData[0]));
-    switch(CMD){
-        case AIO_STATUS:{
-            printStatusRequest(mQueuedData);
-            break;
-        }
-        case QUERY_BUCKET:{
-            printQueryBucket(mQueuedData);
-            break;
-        }
-        case SETUP_BUCKET:{
-            printSetupBucket(mQueuedData);
-            break;
-        }
-        case WRITE_SETUP:{
-            printWriteBucket(mQueuedData);
-            break;
-        }
-        case SWITCH_BUCKET:{
-            printSwitchBucket(mQueuedData);
-            break;
-        }
-        default:{
-            qDebug() << "Unhandled Case" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(CMD);
-            printQueryBucket(mQueuedData);
-            break;
-        }
-    }
-    mLCDCTL->write(mQueuedData);
-    mQueuedData.fill(0);
-    mSub = mCMD = NO_TARGET;
-}
 
 
 void KrakenZDriver::printQueryBucket(QByteArray &data)
 {
-#ifdef DEVELOPER_MODE
     QJsonObject message;
     auto CMD = quint32(data[0]);
     message.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
@@ -476,21 +426,10 @@ void KrakenZDriver::printQueryBucket(QByteArray &data)
     message.insert(ID_VALID, true);
     message.insert(ID_RECV, false);
     emit usbMessage(message);
-#endif
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "msg_type:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "bucket_id:" << qint32(data[3]) << ",";
-//    qDebug() << "asset_id:" << qint32(data[5])  << ",";
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-
 }
-
 void KrakenZDriver::printSetupBucket(QByteArray &data)
 {
     // Determine if its a Delete Bucket or Setup Bucket
-#ifdef DEVELOPER_MODE
     QJsonObject message;
     message.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
     message.insert(ID_TARGET, QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD));
@@ -505,18 +444,6 @@ void KrakenZDriver::printSetupBucket(QByteArray &data)
     message.insert(ID_VALID, true);
     message.insert(ID_RECV, false);
     emit usbMessage(message);
-#endif
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "magic_2:" << data.mid(2,12).toHex() << ",";
-//    qDebug() << "bucket_id:" << data.mid(14,1).toHex() << ",";
-//    qDebug() << "asset_id:" << data.mid(15, 1).toHex()  << ",";
-//    qDebug() << "mode:" << data.mid(16, 1).toHex()  << ",";
-//    qDebug() << "start_memory_slot:" << data.mid(17, 2).toHex()  << ",";
-//    qDebug() << "number_of_memory_slot:" << data.mid(19, 2).toHex();
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
 
 void KrakenZDriver::printWriteBucket(QByteArray &data)
@@ -528,7 +455,6 @@ void KrakenZDriver::printWriteBucket(QByteArray &data)
     auto CMD = quint32(data[0]);
     auto sub = quint8(data[1]);
 
-#ifdef DEVELOPER_MODE
     QJsonObject message;
     message.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
     message.insert(ID_TARGET, QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(CMD));
@@ -543,23 +469,10 @@ void KrakenZDriver::printWriteBucket(QByteArray &data)
     message.insert(ID_VALID, true);
     message.insert(ID_RECV, false);
     emit usbMessage(message);
-#endif
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "msg_type: WRITE_BUCKET";
-//    if(sub == WRITE_START){
-//        qDebug() << "msg_sub: WRITE_START";
-//    } else { // write finish
-//        qDebug() << "msg_sub: WRITE_FINISH";
-//    }
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "bucket_id:" << qint32(data[3]) << ",";
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
 
 void KrakenZDriver::printSwitchBucket(QByteArray &data)
 {
-#ifdef DEVELOPER_MODE
     QJsonObject message;
     message.insert(ID_TIMESTAMP, QTime::currentTime().toString("h:mm:ss:zzz A"));
     message.insert(ID_TARGET, QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(SWITCH_BUCKET));
@@ -574,14 +487,6 @@ void KrakenZDriver::printSwitchBucket(QByteArray &data)
     message.insert(ID_VALID, true);
     message.insert(ID_RECV, false);
     emit usbMessage(message);
-#endif
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(SWITCH_BUCKET);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "bucket_id:" << qint32(data[4]) << ",";
-//    qDebug() << "mode:" << QString(data.mid(2, 2).toHex());
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
 
 void KrakenZDriver::printStatusRequest(QByteArray &data)
@@ -600,14 +505,7 @@ void KrakenZDriver::printStatusRequest(QByteArray &data)
     message.insert(ID_VALID, true);
     message.insert(ID_RECV, false);
     emit usbMessage(message);
-//    qDebug() << "Message Sent @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(AIO_STATUS);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << "";
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
-
-
 void KrakenZDriver::parseResponseMessage(QByteArray &data)
 {
     QJsonObject response;
@@ -625,18 +523,10 @@ void KrakenZDriver::parseResponseMessage(QByteArray &data)
     response.insert(ID_VALID, true);
     response.insert(ID_RECV, true);
     emit usbMessage(response);
-//    qDebug() << "Message Received @ " << QTime::currentTime().toString() << " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-//    qDebug() << "RAW: " << data.toHex();
-//    qDebug() << "target:" << QMetaEnum::fromType<KrakenZDriver::WriteTarget>().valueToKey(mCMD);
-//    qDebug() << "cmd_type:" << data.left(2).toHex() << ",";
-//    qDebug() << "magic_2:" << data.mid(2,12).toHex() << ",";
-//    qDebug() << "bucket_id:" << data.mid(14,1).toHex() << ",";
-//    qDebug() << "asset_id:" << data.mid(15, 1).toHex()  << ",";
-//    qDebug() << "mode:" << data.mid(16, 1).toHex()  << ",";
-//    qDebug() << "start_memory_slot:" << data.mid(17, 2).toHex()  << ",";
-//    qDebug() << "number_of_memory_slot:" << data.mid(19, 2).toHex();
-//    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
 }
+
+#endif
+
 
 
 
@@ -782,7 +672,6 @@ void generate_normalized_profile(QList<TempPoint> &normalized, const QList<TempP
         return;
     }
     int c_index = 0;
-    qDebug() << "Profile : ";
     QList<TempPoint> lower;
     int l_high_temp(max_first/2);
     int l_low_temp(l_high_temp);
@@ -830,11 +719,6 @@ void generate_normalized_profile(QList<TempPoint> &normalized, const QList<TempP
     }
     normalized = lower;
     normalized += upper;
-    qDebug() << "Sorted By Temp: ";
-    c_index = 0;
-    for(auto const& point: normalized){
-        qDebug("[%d] -> temp:%d , point:%d" , c_index++, point.temp, point.point);
-    }
     // final pass makes sure there are not duplicate temps, if a duplicate is found, it will be set to the average of the next two points
     // if it is the last point, set it to an avg of max and current
     length = normalized.length();
@@ -884,11 +768,6 @@ void generate_normalized_profile(QList<TempPoint> &normalized, const QList<TempP
         for(int size = normalized.size(); size > items_remain; --size){
             normalized.pop_back();
         }
-    }
-    qDebug() << "Normalized: ";
-    c_index = 0;
-    for(auto const& point: normalized){
-        qDebug("[%d] -> temp:%d , point:%d" , c_index++, point.temp, point.point);
     }
 }
 
@@ -955,8 +834,6 @@ void KrakenZDriver::sendDeleteBucket(quint8 index)
     delete_bucket[0] = SETUP_BUCKET;
     delete_bucket[1] = DELETE_BUCKET;
     delete_bucket[2] = index;
-    mCMD = SETUP_BUCKET;
-    mSub = DELETE_BUCKET;
     mLCDCTL->write(delete_bucket);
 #ifdef DEVELOPER_MODE
         printSetupBucket(delete_bucket);
@@ -973,8 +850,6 @@ void KrakenZDriver::sendWriteFinishBucket(quint8 index)
     finish_write[0] = WRITE_SETUP;
     finish_write[1] = WRITE_FINISH;
     finish_write[2] = index;
-    mCMD = WRITE_SETUP;
-    mSub = WRITE_FINISH;
     mLCDCTL->write(finish_write);
 #ifdef DEVELOPER_MODE
     printWriteBucket(finish_write);
@@ -991,7 +866,6 @@ void KrakenZDriver::sendWriteStartBucket(quint8 index)
     prepare_write[0] = WRITE_SETUP;
     prepare_write[1] = WRITE_START;
     prepare_write[2] = index;
-    mSub = WRITE_START;
     mLCDCTL->write(prepare_write);
 #ifdef DEVELOPER_MODE
     printWriteBucket(prepare_write);
@@ -1011,8 +885,6 @@ void KrakenZDriver::sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot
     setup_bucket[6] = quint8(memory_slot_count);
     setup_bucket[7] = quint8(memory_slot_count >> 8);
     setup_bucket[8] = 1;
-    mCMD = SETUP_BUCKET;
-    mSub = SET_BUCKET;
     mLCDCTL->write(setup_bucket);
 #ifdef DEVELOPER_MODE
     printSetupBucket(setup_bucket);
@@ -1030,8 +902,6 @@ void KrakenZDriver::sendSwitchBucket(quint8 index, quint8 mode)
     switch_bucket[1] = 0x1;
     switch_bucket[2] = mode;
     switch_bucket[3] = index;
-    mCMD = SWITCH_BUCKET;
-    mSub = NO_TARGET;
     mLCDCTL->write(switch_bucket);
 #ifdef DEVELOPER_MODE
     printSwitchBucket(switch_bucket);
@@ -1049,11 +919,6 @@ void KrakenZDriver::sendStatusRequest()
     request_status.fill(0x0, _WRITE_LENGTH);
     request_status[0] = AIO_STATUS;
     request_status[1] = 0x1;
-    if(!mLCDCTL->isOpen()){
-        mLCDCTL->open(QIODevice::WriteOnly);
-    }
-    mCMD = AIO_STATUS;
-    mSub = WRITE_FINISH;
     mLCDCTL->write(request_status);
 #ifdef DEVELOPER_MODE
     printStatusRequest(request_status);
@@ -1072,8 +937,6 @@ void KrakenZDriver::sendQueryBucket(quint8 index, quint8 asset)
     query_bucket[1] = UNKNOWN_SUB; // 04 SUB?
     query_bucket[3] = index;
     query_bucket[5] = asset;
-    mCMD = QUERY_BUCKET;
-    mSub = UNKNOWN_SUB;
     mLCDCTL->write(query_bucket);
 #ifdef DEVELOPER_MODE
             printQueryBucket(query_bucket);
@@ -1100,14 +963,11 @@ void KrakenZDriver::receivedControlResponse()
        }
        default:
        {
+#ifdef DEVELOPER_MODE
            parseResponseMessage(data);
+#endif
            break;
        }
-   }
-   if(quint8(mQueuedData[0]) != NO_TARGET){
-       sendQueuedWrite();
-   }else {
-       mCMD = NO_TARGET;
    }
 }
 
@@ -1127,5 +987,4 @@ KrakenZDriver::~KrakenZDriver()
     delete mLCDIN;
     mLCDIN = nullptr;
     delete mKrakenDevice;
-    mCMD = NO_TARGET;
 }
