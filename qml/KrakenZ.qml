@@ -11,7 +11,8 @@ Rectangle {
     property bool advanced: false
     property bool drawFPS: false
     property int  frameDelayMS:10
-
+    property int  mode:0 // 0 for nothing, 1 for image, 2 for animated image (gif), 3 for qml
+    property string selectedPath:""
     Text{
         id: deviceName
         color:"white"
@@ -358,6 +359,66 @@ Rectangle {
                 }
             }
         }
+    }
+
+    Rectangle{
+        id: qmlOptions
+        color: "#8d8d8d"
+        anchors.top:krakenPreview.bottom
+        anchors.topMargin: 8
+        radius:6
+        border.color: "#004d4d4d"
+        height:180
+        anchors.left: krakenPreview.left
+        anchors.right: krakenPreview.right
+        Text{
+            id:qmlTitle
+            text:"Qml Options"
+            font.bold: true
+            font.pixelSize: 20
+            font.family: "Cambria"
+            horizontalAlignment: Text.AlignHCenter
+            anchors{
+                left:parent.left
+                right:parent.right
+                top:parent.top
+            }
+        }
+
+        Column{
+            width:parent.width -4
+            anchors{
+                top:qmlTitle.bottom
+                bottom:parent.bottom
+                horizontalCenter: parent.horizontalCenter
+
+            }
+            spacing: 4
+            Rectangle{
+                border.color: "black"
+                radius:4
+                height:32
+                width:parent.width
+                color:"orange"
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text{
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text:"Reload"
+                    color:"white"
+                }
+                MouseArea{
+                    anchors.fill: parent
+                    onClicked:{
+                        userAppController.loadQmlFile(krakenRoot.selectedPath);
+                    }
+                }
+            }
+        }
+
+
+
     }
 
     Text{
@@ -977,6 +1038,7 @@ Rectangle {
         sourceComponent: FileDialog{
             onAccepted: {
                 if(fileUrls.length > 0){
+                    krakenRoot.selectedPath = fileUrls[0].toString();
                     if(fileUrls[0].toString().indexOf(".qml") >= 0){
                         console.log("Loading Qml File: " + fileUrls[0].toString());
                         userAppController.loadQmlFile(fileUrls[0].toString())

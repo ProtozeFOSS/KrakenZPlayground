@@ -1,4 +1,4 @@
-QT += quick
+QT += quick multimedia
 
 CONFIG += c++11
 
@@ -37,4 +37,15 @@ HEADERS += \
     krakenzdriver.h
 
 DISTFILES += \
+    examples/Clock/Clock.qml \
+    examples/Clock/center.png \
+    examples/Clock/clock-night.png \
+    examples/Clock/hour.png \
+    examples/Clock/minute.png \
+    examples/Clock/second.png \
+    examples/Krakify/Fly MP3 license.txt \
+    examples/Krakify/Fly.gif \
+    examples/Krakify/Fly.mp3 \
+    examples/Krakify/Krakify.qml \
+    examples/Krakify/headphones.png \
     examples/Monitor/Monitor.qml
