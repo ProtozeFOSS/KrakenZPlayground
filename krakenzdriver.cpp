@@ -35,7 +35,7 @@ union CHANNEL_SPEED
 };
 
 KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
-    : QObject(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
+    : QObject(parent), mFound(false), mInitialized(false), mCloseCAM(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
       mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(0), mFrames(0), mFrameDelay(0), mFPS(0)
 {
     QUsb usb;
@@ -94,8 +94,13 @@ void KrakenZDriver::initialize()
         {
             mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 2);
             if(!mLCDDATA->open(QIODevice::WriteOnly)){
+
                 qDebug() << "Error opening Bulk write endpoint: " <<  mLCDDATA->errorString();
                 qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
+                if(mLCDDATA->errorString().contains(QStringLiteral("permission"))){
+                    mCloseCAM = true;
+                    return;
+                }
             }
             mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 1); // Write
             mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 129); // Read
@@ -974,12 +979,14 @@ void KrakenZDriver::receivedControlResponse()
 
 KrakenZDriver::~KrakenZDriver()
 {
-    mLCDCTL->close();
-    mLCDDATA->close();
-    mLCDIN->close();
-    QObject::disconnect(mLCDCTL);
-    QObject::disconnect(mLCDDATA);
-    QObject::disconnect(mLCDIN);
+    if(mLCDIN){
+        mLCDCTL->close();
+        mLCDDATA->close();
+        mLCDIN->close();
+        QObject::disconnect(mLCDCTL);
+        QObject::disconnect(mLCDDATA);
+        QObject::disconnect(mLCDIN);
+    }
     delete mLCDCTL;
     mLCDCTL = nullptr;
     delete mLCDDATA;

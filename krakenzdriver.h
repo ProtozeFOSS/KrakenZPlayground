@@ -23,6 +23,7 @@ class KrakenZDriver : public QObject
 {
     Q_OBJECT
     Q_PROPERTY( bool  found READ found NOTIFY foundChanged MEMBER mFound)
+    Q_PROPERTY( bool  closeVenderSoftware READ closeVenderSoftware NOTIFY closeVenderSoftwareChanged)
     Q_PROPERTY( qreal liquidTemperature READ liquidTemperature NOTIFY liquidTemperatureChanged MEMBER mLiquidTemp)
     Q_PROPERTY( quint16 pumpSpeed READ pumpSpeed NOTIFY pumpSpeedChanged MEMBER mPumpSpeed)
     Q_PROPERTY( quint16 fanSpeed READ fanSpeed NOTIFY fanSpeedChanged MEMBER mFanSpeed)
@@ -49,6 +50,7 @@ public:
     QQuickItem* content() { return mContent; }
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
+    bool closeVenderSoftware() { return mCloseCAM; }
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
@@ -102,6 +104,7 @@ signals:
     void fanDutyChanged(quint8 duty_percent);
     void fwInfoChanged(QString fwInfo);
     void versionChanged(QString version);
+    void closeVenderSoftwareChanged(bool close);
     void usbMessage(QJsonObject message);
     void rotationOffsetChanged(int rotation);
     void error(QJsonObject response);
@@ -166,6 +169,7 @@ protected:
 
     bool           mFound;
     bool           mInitialized;
+    bool           mCloseCAM;
     QUsbDevice*    mKrakenDevice; // Single composite usb device handle
     QUsbEndpoint*  mLCDDATA;
     QUsbEndpoint*  mLCDCTL;

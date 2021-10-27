@@ -11,23 +11,6 @@ Window {
     maximumWidth: 600
     title: qsTr("KrakenZ Playground")
     Loader{
-        active:!userWarningLoader.active && !KrakenZDriver.found
-        anchors.fill: parent
-        sourceComponent:  Rectangle{
-            color:"yellow"
-            Image{
-                anchors.fill: parent
-                anchors.margins: 16
-                anchors.bottomMargin:window.height/2
-                fillMode: Image.PreserveAspectFit
-                source: "qrc:/images/SADaf.png"
-            }
-        }
-    }
-
-
-
-    Loader{
         anchors.fill: parent
         active:!userWarningLoader.active && KrakenZDriver.found
         sourceComponent: KrakenZ{

@@ -4,6 +4,7 @@
 #include "krakenzdriver.h"
 #include "krakenimageprovider.h"
 #include "krakenappcontroller.h"
+#include "qusbdevice.h"
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
 #endif
 
     qmlRegisterType<KrakenAppController>("com.krakenzplayground.app", 1, 0, "KrakenAppController");
+    //qmlRegisterType<QUsbDevice>("com.krakenzplayground.app", 1, 0, "QUsbDevice");
     QGuiApplication app(argc, argv);
     KrakenZDriver krakenDevice(&app); // if for some reason you need different PID (z63?), pass it in here
     auto previewProvider = new KrakenImageProvider(&app);
