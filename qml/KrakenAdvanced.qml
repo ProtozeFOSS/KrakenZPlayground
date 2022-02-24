@@ -105,14 +105,14 @@ Rectangle {
             anchors.fill: parent
             width:32
             height:32
-            source:"qrc:/images/NanCat.gif"
+            source:"qrc:/images/Peyton.png"
         }
         MouseArea{
             anchors.fill: parent
             onClicked:{
                 advancedWindow.stopAnimation();
                 KrakenZDriver.clearContentItem();
-                imageSetTimer.imageSource = ":/images/NanCat.gif";
+                imageSetTimer.imageSource = ":/images/Peyton.png";
                 imageSetTimer.start(100);
             }
         }

@@ -7,6 +7,7 @@ Window {
     height:720
     visible: true
     minimumHeight: 720
+    minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
     title: qsTr("KrakenZ Playground")
@@ -43,14 +44,4 @@ Window {
             }
         }
     }
-
-
-
-//    UserWarning{
-//        anchors.fill: parent
-//        anchors.margins:8
-//    }
-
-
-
 }

@@ -1038,15 +1038,17 @@ Rectangle {
         sourceComponent: FileDialog{
             onAccepted: {
                 if(fileUrls.length > 0){
-                    krakenRoot.selectedPath = fileUrls[0].toString();
-                    if(fileUrls[0].toString().indexOf(".qml") >= 0){
-                        console.log("Loading Qml File: " + fileUrls[0].toString());
-                        userAppController.loadQmlFile(fileUrls[0].toString())
+                    console.log(fileUrls);
+                    krakenRoot.selectedPath = fileUrls[0].toString().replace("file://","");
+                    if(krakenRoot.selectedPath.indexOf(".qml") >= 0){
+                        console.log("Loading Qml File: " + krakenRoot.selectedPath);
+                        userAppController.loadQmlFile(krakenRoot.selectedPath)
                         krakenPreview.animated = false;
                         krakenPreview.animationImage.playing = false;
                         KrakenZDriver.setContent(userApp,krakenRoot.frameDelayMS);
                     }else{
-                        console.log("Setting image: " + fileUrls[0]);
+                        console.log("Setting image URL: " + fileUrls[0].toString());
+                        console.log("Setting image file path: " + krakenRoot.selectedPath);
                         if(KrakenZDriver.content){
                             KrakenZDriver.clearContentItem();
                         }
@@ -1056,7 +1058,7 @@ Rectangle {
                             krakenPreview.animated = true;
                             krakenPreview.animationImage.playing = true;
                         }else {
-                            KrakenZDriver.setImage(fileUrls[0].toString());
+                            KrakenZDriver.setImage(krakenRoot.selectedPath);
                             krakenPreview.animated = false;
                             krakenPreview.animationImage.playing = false;
                         }

@@ -92,7 +92,7 @@ void KrakenZDriver::initialize()
         connect(&mDelayTimer, &QTimer::timeout, this, &KrakenZDriver::prepareNextFrame);
         if(mKrakenDevice->open() ==  QUsb::statusOK)
         {
-            mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 2);
+            mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 0x02);
             if(!mLCDDATA->open(QIODevice::WriteOnly)){
 
                 qDebug() << "Error opening Bulk write endpoint: " <<  mLCDDATA->errorString();
@@ -102,10 +102,10 @@ void KrakenZDriver::initialize()
                     return;
                 }
             }
-            mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 1); // Write
-            mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 129); // Read
+            mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 0x01); // Write
+            mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 0x81); // Read
             connect(mLCDIN, &QUsbEndpoint::readyRead, this, &KrakenZDriver::receivedControlResponse);
-            mLCDIN->setPolling(true);
+            //mLCDIN->setPolling(true);
             if(!mLCDCTL->open(QIODevice::WriteOnly) ||  !mLCDIN->open(QIODevice::ReadOnly)){
                 qDebug() << "Failed to open control endpoints: " << mLCDIN->errorString() << " : " << mLCDCTL->errorString();
                 qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
@@ -143,7 +143,7 @@ void KrakenZDriver::prepareNextFrame()
 
 void KrakenZDriver::setBrightness(quint8 brightness)
 {
-    if(brightness >= 0 && brightness <= 100 && mBrightness != brightness){
+    if(brightness <= 100 && mBrightness != brightness){
         mBrightness = brightness;
         sendBrightness(brightness);
         emit brightnessChanged(brightness);
@@ -408,7 +408,7 @@ void KrakenZDriver::printFWRequest(QByteArray &data)
     response.insert(ID_MODE, "");
     response.insert(ID_SESSION, "");
     response.insert(ID_VALID, true);
-    response.insert(ID_RECV, false);
+    response.insert(ID_RECV, false)m_config.interface;
     emit usbMessage(response);
 }
 
