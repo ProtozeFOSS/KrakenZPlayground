@@ -1117,7 +1117,13 @@ Rectangle {
     KrakenAppController{
         id:userAppController
         container:userAppContainer
-
+        onQmlFailed:{
+            errorText.text = error;
+            errorTitle.visible = true;
+        }
+        onAppReady:{
+            userApp.reset();
+        }
     }
 
     Item{
@@ -1128,9 +1134,34 @@ Rectangle {
         Item{
             id:userAppContainer
             anchors.fill: parent
-
         }
 
+        function reset(){
+            errorTitle.visible = false;
+            errorText.text = "";
+        }
+        Text{
+            id:errorTitle
+            anchors.top:parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: 16
+            text:"QML Error"
+            color:"lightblue"
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 24
+            visible:false
+        }
+
+        Text{
+            id:errorText
+            anchors.centerIn:parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            color:"white"
+            width:280
+            wrapMode:Text.WrapAnywhere
+            visible:errorTitle.visible
+        }
         Rectangle{
             visible:krakenRoot.drawFPS
             anchors.bottom:parent.bottom

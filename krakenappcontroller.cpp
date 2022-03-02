@@ -10,6 +10,7 @@ KrakenAppController::KrakenAppController(QQuickItem *parent)
 void KrakenAppController::userComponentReady()
 {
     auto component = qobject_cast<QQmlComponent*>(sender());
+    // change to swtich on status
     if(component->isReady()){
         mCurrentApp = qobject_cast<QQuickItem*>(component->create());
         mCurrentApp->setParentItem(mContainer ? mContainer:this);
@@ -19,6 +20,17 @@ void KrakenAppController::userComponentReady()
                 qDebug() << error;
             }
         }
+        emit appReady();
+    }else {
+//        auto errors = component->errors();
+//        if(component->errors().size()){
+//            for(const auto& error: qAsConst(errors)){
+//                qDebug() << error;
+//            }
+//        }
+        qDebug() << "Component failed" << component->errorString();
+        emit qmlFailed(component->errorString());
+        component->deleteLater();
     }
 }
 
@@ -29,7 +41,13 @@ bool KrakenAppController::loadQmlFile(QString path)
     auto engine = qmlEngine(this);
     if(mCurrentApp){
         mCurrentApp->setVisible(false);
-        mCurrentApp->deleteLater();
+
+        delete mCurrentApp;
+        mCurrentApp = nullptr;
+        auto children = mContainer->childItems();
+        for( const auto& child: qAsConst(children)){
+            delete child;
+        }
     }
     engine->clearComponentCache();
     QQmlComponent component(engine, QUrl(path));
@@ -46,8 +64,20 @@ bool KrakenAppController::loadQmlFile(QString path)
                 qDebug() << error;
             }
         }
+        emit appReady();
+        loaded = true;
     }else {
-        connect(&component, &QQmlComponent::statusChanged, this, &KrakenAppController::userComponentReady);
+        auto errors = component.errors();
+        if(component.errors().size()){
+            for(const auto& error: qAsConst(errors)){
+                qDebug() << error;
+            }
+            qDebug() << "Component failed" << component.errorString();
+            emit qmlFailed(component.errorString());
+            component.deleteLater();
+        }else {
+            connect(&component, &QQmlComponent::statusChanged, this, &KrakenAppController::userComponentReady);
+        }
     }
     return loaded;
 }

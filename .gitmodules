@@ -1,3 +1,6 @@
 [submodule "QtUsb"]
 	path = QtUsb
 	url = https://github.com/ProtozeFOSS/QtUsb.git
+[submodule "examples/Krakify/RadialBar_arunpkqt"]
+	path = examples/Krakify/RadialBar_arunpkqt
+	url = https://github.com/arunpkqt/RadialBarDemo.git

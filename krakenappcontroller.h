@@ -12,7 +12,8 @@ public:
     Q_INVOKABLE bool loadQmlFile(QString path);
 signals:
     void containerChanged(QQuickItem* container);
-
+    void appReady();
+    void qmlFailed(QString error);
 protected slots:
     void userComponentReady();
 
