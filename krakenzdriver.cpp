@@ -162,7 +162,11 @@ void KrakenZDriver::setRotationOffset(int rotation)
 void KrakenZDriver::setImage(QString filepath, quint8 index,bool applyAfterSet)
 {
     QImage image;
+#ifdef Q_OS_WIN
     filepath = filepath.replace("file:///","");
+#else
+    filepath = filepath.replace("file://","");
+#endif
     if(image.load(filepath)){
         setImage(image, index, applyAfterSet);
     }else {

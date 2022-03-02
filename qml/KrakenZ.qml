@@ -10,8 +10,9 @@ Rectangle {
     color: "#2a2e31"
     property bool advanced: false
     property bool drawFPS: false
+    property bool showFPS: true
     property int  frameDelayMS:10
-    property int  mode:0 // 0 for nothing, 1 for image, 2 for animated image (gif), 3 for qml
+    property int  mode:0 // 0 for nothing, 1 for image, 2 for Monitor Mode , 3 for qml, 4 for animated image (gif)
     property string selectedPath:""
     Text{
         id: deviceName
@@ -296,7 +297,7 @@ Rectangle {
             opacity:0
         }
         Rectangle{
-            visible: KrakenZDriver.fps !== 0
+            visible: krakenRoot.showFPS & (KrakenZDriver.fps > 1)
             anchors.bottom:parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
             height: 28
@@ -363,6 +364,7 @@ Rectangle {
 
     Rectangle{
         id: qmlOptions
+        visible: krakenRoot.mode >= 3
         color: "#8d8d8d"
         anchors.top:krakenPreview.bottom
         anchors.topMargin: 8
@@ -390,6 +392,7 @@ Rectangle {
             anchors{
                 top:qmlTitle.bottom
                 bottom:parent.bottom
+                topMargin: 2
                 horizontalCenter: parent.horizontalCenter
 
             }
@@ -398,7 +401,7 @@ Rectangle {
                 border.color: "black"
                 radius:4
                 height:32
-                width:parent.width
+                width:parent.width - 8
                 color:"orange"
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text{
@@ -412,6 +415,48 @@ Rectangle {
                     anchors.fill: parent
                     onClicked:{
                         userAppController.loadQmlFile(krakenRoot.selectedPath);
+                    }
+                }
+            }
+            Rectangle{
+                border.color: "black"
+                radius:4
+                height:32
+                width:parent.width - 8
+                color:krakenRoot.drawFPS ? "red" : "#cc03d429"
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text{
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text:krakenRoot.drawFPS ? "Do Not Draw FPS" : "Draw FPS";
+                    color:"white"
+                }
+                MouseArea{
+                    anchors.fill: parent
+                    onClicked:{
+                        krakenRoot.drawFPS = !krakenRoot.drawFPS;
+                    }
+                }
+            }
+            Rectangle{
+                border.color: "black"
+                radius:4
+                height:32
+                width:parent.width - 8
+                color:krakenRoot.showFPS ? "red" : "#cc03d429"
+                anchors.horizontalCenter: parent.horizontalCenter
+                Text{
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text:krakenRoot.showFPS ? "Hide FPS" : "Show FPS";
+                    color:"white"
+                }
+                MouseArea{
+                    anchors.fill: parent
+                    onClicked:{
+                        krakenRoot.showFPS = !krakenRoot.showFPS;
                     }
                 }
             }
@@ -897,7 +942,7 @@ Rectangle {
         }
     }
 
-
+    // ACTIONS
     Text{
         id: actionsText
         color:"white"
@@ -964,6 +1009,7 @@ Rectangle {
                     if(KrakenZDriver.content){
                         KrakenZDriver.clearContentItem();
                     }
+                    krakenRoot.mode = 2;
                     krakenPreview.animated = false;
                     krakenPreview.animationImage.playing = false;
                     KrakenZDriver.setNZXTMonitor();
@@ -1005,6 +1051,7 @@ Rectangle {
                     if(KrakenZDriver.content){
                         KrakenZDriver.clearContentItem();
                     }
+                    krakenRoot.mode = 2;
                     krakenPreview.animated = false;
                     krakenPreview.animationImage.playing = false;
                     KrakenZDriver.setBuiltIn(1);
@@ -1039,7 +1086,7 @@ Rectangle {
             onAccepted: {
                 if(fileUrls.length > 0){
                     console.log(fileUrls);
-                    krakenRoot.selectedPath = fileUrls[0].toString().replace("file://","");
+                    krakenRoot.selectedPath = fileUrls[0].toString();
                     if(krakenRoot.selectedPath.indexOf(".qml") >= 0){
                         console.log("Loading Qml File: " + krakenRoot.selectedPath);
                         userAppController.loadQmlFile(krakenRoot.selectedPath)
@@ -1047,20 +1094,22 @@ Rectangle {
                         krakenPreview.animationImage.playing = false;
                         KrakenZDriver.setContent(userApp,krakenRoot.frameDelayMS);
                     }else{
-                        console.log("Setting image URL: " + fileUrls[0].toString());
+                        console.log("Setting image URL: " + fileUrls[0]);
                         console.log("Setting image file path: " + krakenRoot.selectedPath);
                         if(KrakenZDriver.content){
                             KrakenZDriver.clearContentItem();
                         }
 
                         if(fileUrls[0].toString().indexOf(".gif") >= 0){
-                            krakenPreview.animationImage.source = fileUrls[0].toString();
+                            krakenPreview.animationImage.source = krakenRoot.selectedPath;
                             krakenPreview.animated = true;
                             krakenPreview.animationImage.playing = true;
+                            krakenRoot.mode = 4;
                         }else {
                             KrakenZDriver.setImage(krakenRoot.selectedPath);
                             krakenPreview.animated = false;
                             krakenPreview.animationImage.playing = false;
+                            krakenRoot.mode = 1;
                         }
                     }
                 }
@@ -1123,6 +1172,7 @@ Rectangle {
         }
         onAppReady:{
             userApp.reset();
+            krakenRoot.mode = 3;
         }
     }
 
@@ -1191,6 +1241,9 @@ Rectangle {
                 text: "FPS: " + KrakenZDriver.fps.toString().slice(0,5)
                 font.family: "Comic Sans MS"
             }
+        }
+        Component.onCompleted: {
+            KrakenZDriver.setNZXTMonitor();
         }
     }
 }

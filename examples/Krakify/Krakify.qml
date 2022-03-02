@@ -17,9 +17,14 @@ Image{
         volume: .6
         onPositionChanged:{
             var remainder = song.duration-song.position;
-            var minutes =  Math.round(remainder/60000)-1;
-            var seconds =  Math.round((remainder % 60000)/1000);
+            var milliseconds =  Math.round((remainder % 60000));
+            var minutes =  (remainder-milliseconds)/60000;
+            var seconds =  Math.round(milliseconds/1000);
             timeLeft.text = "-" + minutes + ":" + String(seconds).padStart(2,"0");
+        }
+        onStopped:{
+            song.seek(0);
+            song.play();
         }
     }
     AnimatedImage{
@@ -100,7 +105,7 @@ Image{
             font.bold: true
             anchors.fill:parent
             color: "#c6c6c6"
-            text:"0:" + String(Math.round(song.position/1000)).padStart(2, '0')
+            text:String((song.position - (song.position%60000))/60000) + ":" + String(Math.round((song.position%60000)/1000)).padStart(2, '0')
             font.letterSpacing: 1
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
