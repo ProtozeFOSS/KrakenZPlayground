@@ -912,36 +912,6 @@ Rectangle {
         }
     }
 
-    Text{
-        id: detailsText
-        color:"white"
-        font.family: "Cambria"
-        font.pixelSize: 20
-        font.bold: true
-        horizontalAlignment: Text.AlignLeft
-        verticalAlignment: Text.AlignBottom
-        anchors{
-            left:parent.left
-            top:krakenPreview.bottom
-            topMargin: 180
-        }
-        leftPadding: 12
-        text: "Details"
-    }
-    Rectangle{
-        id: statusSeparator
-        height:1
-        color:"white"
-        anchors{
-            left:parent.left
-            leftMargin:12
-            right:parent.right
-            rightMargin:12
-            top:detailsText.bottom
-            topMargin: 2
-        }
-    }
-
     // ACTIONS
     Text{
         id: actionsText
@@ -1134,6 +1104,7 @@ Rectangle {
             margins:4
             leftMargin:24
             bottom:parent.bottom
+            bottomMargin:12
         }
         height: 72
         spacing: 42

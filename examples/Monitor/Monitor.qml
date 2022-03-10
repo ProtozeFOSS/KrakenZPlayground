@@ -1,7 +1,7 @@
 import QtQuick 2.15
 
 Rectangle{
-    color:"white"
+    color:"#00aaff"
     anchors.fill: parent
     AnimatedImage{
         id:pumpAnimation
@@ -85,7 +85,7 @@ Rectangle{
             smooth:true
             playing: true
             fillMode: Image.PreserveAspectFit
-            speed: (KrakenZDriver.fanDuty/100 * 6)
+            speed: topFan.speed
             height:width
             anchors{
                 left:parent.left
@@ -99,7 +99,7 @@ Rectangle{
             smooth:true
             playing: true
             fillMode: Image.PreserveAspectFit
-            speed: (KrakenZDriver.fanDuty/100 * 6)
+            speed: topFan.speed
             height:width
             anchors{
                 left:parent.left

@@ -10,7 +10,7 @@ Window {
     minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
-    title: qsTr("KrakenZ Playground")
+    title: qsTr("Kraken Z Playground")
     Loader{
         anchors.fill: parent
         active:!userWarningLoader.active && KrakenZDriver.found

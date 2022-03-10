@@ -1,6 +1,6 @@
 import QtQuick 2.15
 
-Item {
+Rectangle {
     id : clock
     anchors.fill:parent
     property int hours
@@ -16,7 +16,7 @@ Item {
     anchors.centerIn: parent
     width:340
     height:340
-
+    color:"black"
     Timer {
         interval: 100; running: true; repeat: true;
         onTriggered: clock.timeChanged()
