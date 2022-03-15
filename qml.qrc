@@ -1,11 +1,13 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/KrakenAdvanced.qml</file>
+        <file>qml/KrakenZAdvanced.qml</file>
         <file>qml/KrakenZ.qml</file>
-        <file>qml/KrakenLiquidControl.qml</file>
+        <file>qml/LiquidMonitor.qml</file>
         <file>qml/LCDPreviewDelegate.qml</file>
         <file>qml/UserWarning.qml</file>
-        <file>qml/TestQmlApp.qml</file>
+        <file>qml/KrakenZConfigure.qml</file>
+        <file>qml/MissingDevice.qml</file>
+        <file>qml/PermissionDenied.qml</file>
     </qresource>
 </RCC>

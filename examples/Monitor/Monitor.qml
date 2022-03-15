@@ -121,4 +121,16 @@ Rectangle{
         color: "#00f521"
         radius:1
     }
+    Text{
+      anchors{
+         bottom:parent.bottom
+         bottomMargin:4
+         horizontalCenter: parent.horizontalCenter
+      }
+      text:"Bucket:" + KrakenZDriver.bucket
+      font.pixelSize: 12
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      color:"white"
+    }
 }

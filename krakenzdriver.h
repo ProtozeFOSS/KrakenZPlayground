@@ -11,6 +11,7 @@
 class QQuickItemGrabResult;
 
 class QUsbDevice;
+const int IMAGE_FRAME_SIZE = 409600;
 struct  TempPoint{
     quint8  temp;
     quint8  point;
@@ -23,7 +24,6 @@ class KrakenZDriver : public QObject
 {
     Q_OBJECT
     Q_PROPERTY( bool  found READ found NOTIFY foundChanged MEMBER mFound)
-    Q_PROPERTY( bool  closeVenderSoftware READ closeVenderSoftware NOTIFY closeVenderSoftwareChanged)
     Q_PROPERTY( qreal liquidTemperature READ liquidTemperature NOTIFY liquidTemperatureChanged MEMBER mLiquidTemp)
     Q_PROPERTY( quint16 pumpSpeed READ pumpSpeed NOTIFY pumpSpeedChanged MEMBER mPumpSpeed)
     Q_PROPERTY( quint16 fanSpeed READ fanSpeed NOTIFY fanSpeedChanged MEMBER mFanSpeed)
@@ -35,6 +35,8 @@ class KrakenZDriver : public QObject
     Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged MEMBER mFPS)
     Q_PROPERTY( QQuickItem* content READ content WRITE setContent NOTIFY contentChanged MEMBER mContent)
     Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged MEMBER mBrightness)
+    Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged MEMBER mImageIndex)
+    Q_PROPERTY( quint32 frameDelay READ frameDelay WRITE setFrameDelay NOTIFY frameDelayChanged MEMBER mFrameDelay)
 public:
     explicit KrakenZDriver(QObject *parent = nullptr, quint16 VID = 0x1e71, quint16 PID = 0x3008);
     static quint16 calculateMemoryStart(quint8 index);
@@ -46,11 +48,12 @@ public:
     quint8 brightness() { return mBrightness; }
     QString version() { return mVersion; }
     QString fwInfo() { return mFwInfo; }
+    short bucket() { return mImageIndex; }
     int     rotationOffset() { return mRotationOffset; }
+    quint32 frameDelay() { return mFrameDelay; }
     QQuickItem* content() { return mContent; }
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
-    bool closeVenderSoftware() { return mCloseCAM; }
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
@@ -85,9 +88,16 @@ public:
         SEND_WRITE_FINISH,
         SEND_SWITCH
     };
-    enum CHANNELS{
+    enum Channel {
         PUMP_CHANNEL = 0x1,
         FAN_CHANNEL = 0x2
+    };
+    enum OperationMode {
+        DISPLAY_BLACK = 0x00,
+        BUILT_IN = 0x01,
+        LIQUID_MONITOR = 0x02,
+        ASSET_MODE = 0x03,
+        BUCKET_MODE = 0x04
     };
 
     Q_ENUM(WriteTarget)
@@ -99,22 +109,25 @@ signals:
     void liquidTemperatureChanged(qreal temperature);
     void pumpSpeedChanged(quint16 pump_rpm);
     void brightnessChanged(quint8 brightness);
+    void frameDelayChanged(quint32 frameDelay);
     void fanSpeedChanged(quint16 fan_rpm);
     void pumpDutyChanged(quint8 duty_percent);
     void fanDutyChanged(quint8 duty_percent);
     void fwInfoChanged(QString fwInfo);
     void versionChanged(QString version);
-    void closeVenderSoftwareChanged(bool close);
+    void deviceReady();
     void usbMessage(QJsonObject message);
     void rotationOffsetChanged(int rotation);
     void error(QJsonObject response);
     void imageTransfered(QImage frame);
+    void bucketChanged(quint8 bucket);
 
 public slots:
     void initialize();
     void startMonitoringFramerate();
     void stopMonitoringFramerate();
-    void setContent(QQuickItem* content, quint32 frame_delay = 50);
+    void setContent(QQuickItem* content);
+    void setFrameDelay(quint32 frameDelay);
     void clearContentItem();
     void setRotationOffset(int rotation);
     void setBrightness(quint8 brightness);
@@ -132,8 +145,10 @@ public slots:
 protected slots:
     void receivedControlResponse();
     void imageReady();
+    void imageChunkWritten(qint64 bytes);
     void prepareNextFrame();
     void updateFrameRate();
+    void frameChunkWritten(qint64 bytes);
 
 protected:
 #ifdef DEVELOPER_MODE
@@ -169,7 +184,6 @@ protected:
 
     bool           mFound;
     bool           mInitialized;
-    bool           mCloseCAM;
     QUsbDevice*    mKrakenDevice; // Single composite usb device handle
     QUsbEndpoint*  mLCDDATA;
     QUsbEndpoint*  mLCDCTL;
@@ -188,10 +202,17 @@ protected:
 
     // Write Buffer
     QQuickItem*         mContent;
+    QString             mFilePath;
     QSharedPointer<QQuickItemGrabResult> mResult;
     short               mBufferIndex; // buffer index
     short               mImageIndex; // bucket id
     QTimer              mMeasure;
+    qint64              mBytesLeft;
+    quint64             mBytesSent;
+    char                mFrameOut[IMAGE_FRAME_SIZE];
+    QImage              mImageOut;
+    bool                mApplyAfterSet;
+    bool                mWritingImage;
     short               mFrames;
     quint32             mFrameDelay;
     qreal               mFPS;

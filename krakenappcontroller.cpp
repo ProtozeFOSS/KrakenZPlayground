@@ -22,12 +22,6 @@ void KrakenAppController::userComponentReady()
         }
         emit appReady();
     }else {
-//        auto errors = component->errors();
-//        if(component->errors().size()){
-//            for(const auto& error: qAsConst(errors)){
-//                qDebug() << error;
-//            }
-//        }
         qDebug() << "Component failed" << component->errorString();
         emit qmlFailed(component->errorString());
         component->deleteLater();
@@ -52,10 +46,6 @@ bool KrakenAppController::loadQmlFile(QString path)
     engine->clearComponentCache();
     QQmlComponent component(engine, QUrl(path));
     if(component.isReady()){
-//        QVariantMap properties;
-//        properties.insert("lcDevice", QVariant::fromValue(deviceObj));
-//        QJsonObject deviceInfo;
-//        properties.insert("deviceInfo", deviceInfo);
         mCurrentApp = qobject_cast<QQuickItem*>(component.create());
         mCurrentApp->setParentItem(mContainer ? mContainer:this);
         auto errors = component.errors();
