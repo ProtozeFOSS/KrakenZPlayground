@@ -2,8 +2,15 @@
 Fun interaction and play with NZXT Kraken Z AIOs and the Qml language. The application connects and communicates with the Kraken Z series AIO through USB. 
 Through the application the user can change pump speeds, fan speeds and brightness. Orientation for the Kraken Z series is handled in software. 
 
-<img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="600"/>
+<img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="400"/>
 
+# Discussion for App development and bugs
+Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/zTrAYseK)
+
+# Cool Community projects
+ - So empty.... 
+
+ join the discord discussion and share your project or make a pull request with a link and one sentence description of project.
 
 # Running QML 
 It is possible to run Qml on the kraken device using "Set Qml button". The Qml file chosen will load as the "root" Qml object and provides access to a KrakenZDriver. This object will be the live connection to the KrakenDevice. Using methods and properties, your Qml code can interact with the display in real time; including the ability to show animations, images, and even play sounds. The project contains 3 Qml examples, A Clock, a Monitoring app, and Krakify.
@@ -13,8 +20,9 @@ Plays a single song [Fly by Fransis Derelle,Parker Polhil](https://ncs.io/fly)
 <img src="./docs/Krakify.gif" alt="Krakify Example (Animated image)" width="600"/>
 
 And uses the Qml Audio item to play and communicate position and duration information.
-<img src="https://user-images.githubusercontent.com/2994631/156314101-7d07d8b2-e4a6-4255-a827-b5054e6e4006.png" alt="Audo example" width="1200"/>
-![image]()
+
+<img src="https://user-images.githubusercontent.com/2994631/156314101-7d07d8b2-e4a6-4255-a827-b5054e6e4006.png" alt="Audo example" width="800"/>
+
 
 ## Example - Monitor Qml
 A mixture of gifs (frame speed controlled by pump and fan rpm) and live content
@@ -22,12 +30,19 @@ A mixture of gifs (frame speed controlled by pump and fan rpm) and live content
 <img src="./docs/Monitor.gif" alt="Monitor Example (Animated image)" width="600"/>
 
 
+## Example - Clock Qml
+A less fancy version of the [Qt Qml Clock Demo](https://doc.qt.io/qt-5/qtdoc-demos-clocks-example.html)
+
+<img src="./docs/Clock.gif" alt="Clock Example (Animated image)" width="600"/>
+
+
 ## Clone with git (cli)
 `git clone https://github.com/ProtozeFOSS/KrakenZPlayground`
 
 `cd KrakenZPlayground`
 
-`git submodule update --init --recursive`
+`git submodule init --recursive`
+
 
 
 ## Building from source
