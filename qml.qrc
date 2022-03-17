@@ -3,7 +3,6 @@
         <file>qml/main.qml</file>
         <file>qml/KrakenZAdvanced.qml</file>
         <file>qml/KrakenZ.qml</file>
-        <file>qml/LiquidMonitor.qml</file>
         <file>qml/LCDPreviewDelegate.qml</file>
         <file>qml/UserWarning.qml</file>
         <file>qml/KrakenZConfigure.qml</file>

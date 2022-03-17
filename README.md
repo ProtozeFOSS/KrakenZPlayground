@@ -41,7 +41,7 @@ A less fancy version of the [Qt Qml Clock Demo](https://doc.qt.io/qt-5/qtdoc-dem
 
 `cd KrakenZPlayground`
 
-`git submodule init --recursive`
+`git submodule update --init --recursive`
 
 
 
