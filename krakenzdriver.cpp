@@ -44,7 +44,7 @@ union CHANNEL_SPEED
 
 KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
     : QObject(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
-      mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(0), mBytesLeft(0), mBytesSent(0), mApplyAfterSet(false), mWritingImage(true), mFrames(0), mFrameDelay(100), mFPS(0)
+      mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mContent(nullptr), mBufferIndex(-1), mImageIndex(1), mBytesLeft(0), mBytesSent(0), mApplyAfterSet(false), mWritingImage(true), mFrames(0), mFrameDelay(100), mFPS(0)
 {
     QUsb usb;
     auto devices = usb.devices();
@@ -97,7 +97,7 @@ void KrakenZDriver::initialize()
         connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
         mDelayTimer.setTimerType(Qt::PreciseTimer);
         mDelayTimer.setSingleShot(true);
-        mDelayTimer.setInterval(50);
+        mDelayTimer.setInterval(mFrameDelay);
         connect(&mDelayTimer, &QTimer::timeout, this, &KrakenZDriver::prepareNextFrame);
         if(mKrakenDevice->open() ==  QUsb::statusOK)
         {
@@ -224,26 +224,27 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     if(index == mImageIndex){
         index = 0 == index ? 1:0;
     }
+    mImageIndex = index;
+    sendQueryBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
-    sendQueryBucket(index);
-    mLCDCTL->waitForBytesWritten(1000);
-    sendDeleteBucket(index);
+    sendDeleteBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     auto byteCount = image_out.sizeInBytes();
-    mBytesLeft = byteCount;
-    sendSetupBucket(index, index + 1, calculateMemoryStart(index), byteCount/1024);
+    sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , 400);
     mLCDCTL->waitForBytesWritten(1000);
-    sendWriteStartBucket(index);
+    sendWriteStartBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendBulkDataInfo(2, byteCount);
-    mLCDDATA->waitForBytesWritten(2000);
-    memcpy_s(mFrameOut, IMAGE_FRAME_SIZE, image_out.constBits(), byteCount);
-    mApplyAfterSet = applyAfterSet;
-    connect(mLCDDATA, &QUsbEndpoint::bytesWritten, this, &KrakenZDriver::imageChunkWritten);
-    mWritingImage = true;
-    mBytesSent = mLCDDATA->write(mFrameOut, mBytesLeft);
-    mImageIndex = index;
-    mBytesLeft -= mBytesSent;
+    mLCDDATA->waitForBytesWritten(1);
+    mLCDDATA->writeDataSynchronous(reinterpret_cast<const char*>(image_out.constBits()), byteCount);
+    mLCDDATA->waitForBytesWritten(1);
+    sendWriteFinishBucket(index);
+    mLCDCTL->waitForBytesWritten(1000);
+    if(applyAfterSet) {
+        sendSwitchBucket(index);
+        mLCDCTL->waitForBytesWritten(1000);
+    }
+    emit imageTransfered(mImageOut);
 }
 
 void KrakenZDriver::imageChunkWritten(qint64 bytes)
@@ -340,14 +341,17 @@ void KrakenZDriver::imageReady()
     sendDeleteBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     auto byteCount = frame_out.sizeInBytes();
-    sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , byteCount/1024);
+    sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , 400);
     mLCDCTL->waitForBytesWritten(1000);
     sendWriteStartBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendBulkDataInfo(2, byteCount);
-    mLCDDATA->waitForBytesWritten(2000);
-    mLCDDATA->write(reinterpret_cast<const char*>(frame_out.constBits()), byteCount);
-    mLCDDATA->waitForBytesWritten(5000);
+    mLCDDATA->waitForBytesWritten(1);
+    auto written = mLCDDATA->writeDataSynchronous(reinterpret_cast<const char*>(frame_out.constBits()), byteCount);
+    if(written < byteCount){
+        qDebug() << "Resend bulk transfer";
+    }
+    mLCDDATA->waitForBytesWritten(1);
     mDelayTimer.start(mFrameDelay);
     emit imageTransfered(frame);
 }
@@ -649,7 +653,7 @@ void KrakenZDriver::sendBulkDataInfo(quint8 mode, quint32 size)
     bulk_info[17] = 0x40;
     bulk_info[18] = 0x96;
     //qDebug() << "Bulk Info: " << bulk_info.left(20).toHex();
-    mLCDDATA->write(bulk_info);
+    mLCDDATA->writeDataSynchronous(bulk_info, _WRITE_BULK_LENGTH);
 }
 
 void KrakenZDriver::sendBrightness(quint8 brightness)
