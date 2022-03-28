@@ -10,8 +10,6 @@ Window {
     minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
-    title: qsTr("Kraken Z Playground")
-
     Rectangle { // Main content container
         id: container
         anchors.fill: parent
@@ -78,20 +76,6 @@ Window {
             anchors.fill: parent
             active:false
             sourceComponent: KrakenZ{
-                onAdvancedChanged: {
-                    if(advanced){
-                        window.maximumWidth = 1040
-                        window.width = 1040
-                        window.minimumWidth = 1040;
-                    } else {
-                        window.minimumWidth = 600;
-                        window.width = 600
-                        window.maximumWidth = 600
-                    }
-                }
-                Component.onCompleted:{
-                    KrakenZDriver.setBrightness(55);
-                }
             }
         }
         Loader{
@@ -123,7 +107,6 @@ Window {
 
             }
         }
-
         Loader{
             id:userWarningLoader
             active:true
@@ -138,5 +121,8 @@ Window {
                 }
             }
         }
+    }
+    Component.onCompleted: {
+        SystemTray.setVisible();
     }
 }

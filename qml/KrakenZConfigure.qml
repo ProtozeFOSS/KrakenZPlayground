@@ -49,7 +49,7 @@ Rectangle{
         }
         // 90
         Rectangle {
-            color:KrakenZDriver.rotationOffset == 90 ? "#b37dc791":"#66596973"
+            color:KrakenZDriver.rotationOffset == 270 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -69,7 +69,7 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: {KrakenZDriver.rotationOffset =  90; krakenWhiteRing.rotation = 270;}
+                onClicked: {KrakenZDriver.rotationOffset =  270; krakenWhiteRing.rotation = 270;}
             }
         }
 
@@ -112,7 +112,7 @@ Rectangle{
         }
         // 270
         Rectangle {
-            color:KrakenZDriver.rotationOffset == 270 ? "#b37dc791":"#66596973"
+            color:KrakenZDriver.rotationOffset == 90 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -132,7 +132,7 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: {KrakenZDriver.rotationOffset =  270; krakenWhiteRing.rotation = 90;}
+                onClicked: {KrakenZDriver.rotationOffset =  90; krakenWhiteRing.rotation = 90;}
             }
         }
         // 180

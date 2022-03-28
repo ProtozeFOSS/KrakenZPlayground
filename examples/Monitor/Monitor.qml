@@ -10,7 +10,7 @@ Rectangle{
         smooth:true
         playing: true
         fillMode: Image.PreserveAspectFit
-        speed: KrakenZDriver.pumpDuty > 50 ? KrakenZDriver.pumpDuty/100 *6 + 1 : (KrakenZDriver.pumpDuty/100 * 2) + .15
+        speed: ((3 + (KrakenZDriver.fps / PrimaryScreen.refreshRate)) * KrakenZDriver.pumpDuty) / 200
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.horizontalCenterOffset: -36
         anchors.verticalCenter: parent.verticalCenter
@@ -70,7 +70,7 @@ Rectangle{
             smooth:true
             playing: true
             fillMode: Image.PreserveAspectFit
-            speed: (KrakenZDriver.fanDuty/100 * 6)
+            speed: ((4 + (KrakenZDriver.fps / PrimaryScreen.refreshRate)) * KrakenZDriver.fanDuty) / 400
             height:width
             anchors{
                 left:parent.left

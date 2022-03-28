@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>qml/main.qml</file>
-        <file>qml/KrakenZAdvanced.qml</file>
         <file>qml/KrakenZ.qml</file>
         <file>qml/LCDPreviewDelegate.qml</file>
         <file>qml/UserWarning.qml</file>

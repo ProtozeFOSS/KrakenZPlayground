@@ -208,43 +208,36 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     if(image.format() != QImage::Format_RGBA8888){
         image.convertTo(QImage::Format_RGBA8888);
     }
-    // enforce size
-    if(image.width() != 320 || image.height() != 320){
-        mImageOut = image.scaled(320,320);
-    }else {
-        mImageOut = image;
-    }
     if(mContent){
         mContent = nullptr;
         return;
     }
-    QTransform rotation;
-    rotation.rotate(mRotationOffset); // rotate to software defined display rotation
-    auto image_out = mImageOut.transformed(rotation);
     if(index == mImageIndex){
         index = 0 == index ? 1:0;
     }
     mImageIndex = index;
+    emit bucketChanged(mImageIndex);
     sendQueryBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendDeleteBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
-    auto byteCount = image_out.sizeInBytes();
+    auto byteCount = image.sizeInBytes();
     sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , 400);
     mLCDCTL->waitForBytesWritten(1000);
     sendWriteStartBucket(mImageIndex);
     mLCDCTL->waitForBytesWritten(1000);
     sendBulkDataInfo(2, byteCount);
     mLCDDATA->waitForBytesWritten(1);
-    mLCDDATA->writeDataSynchronous(reinterpret_cast<const char*>(image_out.constBits()), byteCount);
+    mLCDDATA->writeDataSynchronous(reinterpret_cast<const char*>(image.constBits()), byteCount);
     mLCDDATA->waitForBytesWritten(1);
     sendWriteFinishBucket(index);
     mLCDCTL->waitForBytesWritten(1000);
+    ++mFrames;
     if(applyAfterSet) {
         sendSwitchBucket(index);
         mLCDCTL->waitForBytesWritten(1000);
     }
-    emit imageTransfered(mImageOut);
+    //emit imageTransfered(mImageOut);
 }
 
 void KrakenZDriver::imageChunkWritten(qint64 bytes)

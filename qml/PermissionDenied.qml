@@ -125,7 +125,7 @@ Rectangle {
 //            verticalAlignment: Text.AlignVCenter
 //            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
 //            color:"white"
-//            text:"NZXT KRAKEN Z Device Found!\nBut you don't have access!\n\n Most likely CAM is open or some other sofware is using the LCD endpoint.\nClose it and restart KrakenZPlayground."
+//            text:"NZXT KRAKEN Z Device Found!\nBut you don't have access!\n\n Most likely CAM is open or some other sofware is using the LCD endpoint.\nClose it and restart Kraken Z Playground."
 //        }
 //    }
 //}

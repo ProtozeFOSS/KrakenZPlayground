@@ -2,7 +2,6 @@ import QtQuick 2.15
 
 Rectangle {
     id : clock
-    anchors.fill:parent
     property int hours
     property int minutes
     property int seconds
@@ -13,9 +12,7 @@ Rectangle {
         minutes = date.getMinutes()
         seconds = date.getSeconds();
     }
-    anchors.centerIn: parent
-    width:340
-    height:340
+    anchors.fill: parent
     color:"black"
     Timer {
         interval: 100; running: true; repeat: true;

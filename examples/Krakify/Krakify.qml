@@ -4,9 +4,7 @@ import QtMultimedia 5.8
 import "RadialBar_arunpkqt"
 Image{
     id:background
-    anchors.centerIn: parent
-    height:330
-    width:320
+    anchors.fill: parent
     fillMode: Image.Stretch
     source:"Fly.png"
 
@@ -21,6 +19,7 @@ Image{
             var minutes =  (remainder-milliseconds)/60000;
             var seconds =  Math.round(milliseconds/1000);
             timeLeft.text = "-" + minutes + ":" + String(seconds).padStart(2,"0");
+
         }
         onStopped:{
             song.seek(0);

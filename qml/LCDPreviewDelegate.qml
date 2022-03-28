@@ -4,9 +4,10 @@ import QtGraphicalEffects 1.15
 Rectangle {
     id:background
     property bool animated: false
+    rotation:KrakenZDriver.rotationOffset
     property int bufferIndex: 0
     Connections{
-        target: KrakenPreviewImage
+        target: KrakenImageProvider
         enabled: !background.animated
         function onImageReady(){
             bufferIndex = !bufferIndex; // double buffering

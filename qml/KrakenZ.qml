@@ -4,12 +4,10 @@ import QtQuick.Dialogs 1.2
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.platform 1.1
-import com.krakenzplayground.app 1.0;
 
 Rectangle {
     id: krakenRoot
     color: "#2a2e31"
-    property bool advanced: false
     property bool drawFPS: false
     property bool showFPS: true
     property int  mode:0 // 0 for nothing, 1 for image, 2 for Monitor Mode , 3 for qml, 4 for animated image (gif)
@@ -32,35 +30,6 @@ Rectangle {
     }
 
     Rectangle{
-        id: advancedButton
-        anchors{
-            left: deviceName.right
-            leftMargin: 480 - deviceName.paintedWidth
-            verticalCenter: deviceName.verticalCenter
-        }
-        width: 88
-        radius:4
-        Text{
-            anchors.fill: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            color:"lightgrey"
-            text:"Advanced"
-            font.bold: true
-        }
-
-        MouseArea{
-            anchors.fill: parent
-            onClicked:{
-                krakenRoot.advanced = !krakenRoot.advanced;
-            }
-        }
-
-        height:deviceName.paintedHeight - 4
-        color: "#5a5a5a"
-    }
-
-    Rectangle{
         id: deviceSeparator
         height:1
         color:"white"
@@ -77,7 +46,7 @@ Rectangle {
     Text{
         id: liquidTempLabel
         color: "white"
-        font.pixelSize: 28
+        font.pixelSize: 20
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         anchors{
@@ -96,7 +65,7 @@ Rectangle {
         color: "#5ce4f9"
         style: Text.Sunken
         styleColor:"#487071"
-        font.pixelSize: 34
+        font.pixelSize: 18
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.weight: Font.ExtraBold
@@ -115,7 +84,7 @@ Rectangle {
     Text{
         id: pumpSpeedLabel
         color: "white"
-        font.pixelSize: 24
+        font.pixelSize: 20
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignBottom
         anchors{
@@ -134,7 +103,7 @@ Rectangle {
         color: "#97ffae"
         style: Text.Sunken
         styleColor:"#3d6d54"
-        font.pixelSize:24
+        font.pixelSize:18
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.weight: Font.Bold
@@ -151,7 +120,7 @@ Rectangle {
     Text{
         id: fanSpeedLabel
         color: "white"
-        font.pixelSize:24
+        font.pixelSize:20
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignBottom
         anchors{
@@ -169,7 +138,7 @@ Rectangle {
         color: "#97ffae"
         style: Text.Sunken
         styleColor:"#3d6d54"
-        font.pixelSize:24
+        font.pixelSize:18
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.weight: Font.Bold
@@ -187,7 +156,7 @@ Rectangle {
     Text{
         id: pumpDutyLabel
         color: "white"
-        font.pixelSize: 24
+        font.pixelSize: 20
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignBottom
         anchors{
@@ -205,7 +174,7 @@ Rectangle {
         color: "#fcffa6"
         style: Text.Sunken
         styleColor:"#887c42"
-        font.pixelSize:24
+        font.pixelSize:18
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.weight: Font.Bold
@@ -222,7 +191,7 @@ Rectangle {
     Text{
         id: fanDutyLabel
         color: "white"
-        font.pixelSize:24
+        font.pixelSize:20
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignBottom
         anchors{
@@ -240,7 +209,7 @@ Rectangle {
         color: "#fcffa6"
         style: Text.Sunken
         styleColor:"#887c42"
-        font.pixelSize:24
+        font.pixelSize:18
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         font.weight: Font.Bold
@@ -256,9 +225,11 @@ Rectangle {
     }
     LCDPreviewDelegate{
         id:krakenPreview
-        anchors.top: pumpSpeedLabel.top
-        anchors.left: pumpSpeedValue.right
-        anchors.leftMargin: -42
+        anchors{
+            top: pumpSpeedLabel.top
+            right: parent.right
+            rightMargin: 4
+        }
         width:320
         height:320
         property int frame:0
@@ -266,7 +237,7 @@ Rectangle {
             krakenPreview.grabToImage(
                function(result) {
                    krakenPreview.frame = !krakenPreview.frame
-                   KrakenZDriver.setImage(result.image, krakenPreview.frame, true);
+                   KrakenImageProvider.loadImage(result.image);
                });
         }
 
@@ -431,7 +402,7 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked:{
-                        userAppController.loadQmlFile(krakenRoot.selectedPath);
+                        AppController.loadQmlFile(krakenRoot.selectedPath);
                     }
                 }
             }
@@ -474,6 +445,11 @@ Rectangle {
                     anchors.fill: parent
                     onClicked:{
                         krakenRoot.showFPS = !krakenRoot.showFPS;
+                        if(krakenRoot.showFPS) {
+                            KrakenZDriver.startMonitoringFramerate();
+                        } else {
+                            KrakenZDriver.stopMonitoringFramerate();
+                        }
                     }
                 }
             }
@@ -484,8 +460,8 @@ Rectangle {
                 Text{
                     id: lowDelay
                     color:"white"
-                    text:"10"
-                    leftPadding:16
+                    text: setDelay.from
+                    leftPadding:6
                     font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                     anchors{
@@ -503,10 +479,10 @@ Rectangle {
                     }
                     snapMode:Slider.SnapAlways
                     live:false
-                    from: 10
+                    from: 40
                     to: 1000
-                    stepSize:10
-                    value:KrakenZDriver.frameDelay
+                    stepSize:5
+                    value:AppController.frameDelay
                     handle:Rectangle{
                         color: "#655e71"
                         border.color: "#b9b9b9"
@@ -539,7 +515,7 @@ Rectangle {
 
                     onValueChanged: {
                         delayValue.text  = "frame delay " + setDelay.value + "ms"
-                        KrakenZDriver.frameDelay = value;
+                        AppController.frameDelay = value;
                     }
 
                     height: 36
@@ -585,7 +561,7 @@ Rectangle {
             topMargin:2
             left: parent.left
         }
-        font.pixelSize: 24
+        font.pixelSize: 22
         color:"white"
         style: Text.Sunken
         styleColor: "#737272"
@@ -682,6 +658,7 @@ Rectangle {
         anchors{
             verticalCenter: setFanSlider.verticalCenter
             right:krakenPreview.left
+            rightMargin: 24
         }
     }
 
@@ -696,7 +673,7 @@ Rectangle {
             left:parent.left
             topMargin:2
         }
-        font.pixelSize: 24
+        font.pixelSize: 22
         color:"white"
         style: Text.Sunken
         styleColor: "#737272"
@@ -803,7 +780,7 @@ Rectangle {
             left:parent.left
             topMargin:2
         }
-        font.pixelSize: 24
+        font.pixelSize: 22
         color:"white"
         style: Text.Sunken
         styleColor: "#737272"
@@ -923,7 +900,7 @@ Rectangle {
             left:parent.left
             topMargin:2
         }
-        font.pixelSize: 24
+        font.pixelSize: 22
         color:"white"
         style: Text.Sunken
         styleColor: "#737272"
@@ -1025,7 +1002,7 @@ Rectangle {
         id: actionsText
         color:"white"
         font.family: "Cambria"
-        font.pixelSize: 20
+        font.pixelSize: 22
         font.bold: true
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignBottom
@@ -1177,10 +1154,9 @@ Rectangle {
                     krakenRoot.selectedPath = files[0].toString();
                     if(krakenRoot.selectedPath.indexOf(".qml") >= 0){ // app
                         console.log("Loading Qml File: " + krakenRoot.selectedPath);
-                        userAppController.loadQmlFile(krakenRoot.selectedPath)
+                        AppController.loadQmlFile(krakenRoot.selectedPath)
                         krakenPreview.animated = false;
                         krakenPreview.animationImage.playing = false;
-                        KrakenZDriver.setContent(userApp);
                     }else{
                         console.log("Setting image file path: " + krakenRoot.selectedPath);
                         if(files[0].toString().indexOf(".gif") >= 0){ // animated image
@@ -1192,7 +1168,7 @@ Rectangle {
                             KrakenZDriver.clearContentItem();
                             krakenPreview.animated = false;
                             krakenPreview.animationImage.playing = false;
-                            KrakenZDriver.setImage(krakenRoot.selectedPath, KrakenZDriver.bucket ^ 1);
+                            KrakenImageProvider.loadImage(krakenRoot.selectedPath);
                             krakenRoot.mode = 1;
                         }
                     }
@@ -1226,23 +1202,6 @@ Rectangle {
         orientation: ListView.Horizontal
         model: actionModel
     }
-    // Advanced Section
-    KrakenZAdvanced{
-        id:krakenAdvanced
-        visible:true
-        anchors.left:parent.left
-        anchors.leftMargin: 602
-        anchors.top:parent.top
-        anchors.topMargin:16
-        anchors.bottom: parent.bottom
-        onSetImage:{
-            krakenPreview.animated = false;
-            krakenPreview.animationImage.playing = false;
-            imageSetTimer.imageSource = image;
-            krakenRoot.mode = 1;
-            imageSetTimer.start(100);
-        }
-    }
     Timer{
         id:statusPoll
         interval:900
@@ -1252,16 +1211,15 @@ Rectangle {
             KrakenZDriver.sendStatusRequest();
         }
     }
-    KrakenAppController{
-        id:userAppController
-        container:userAppContainer
-        onQmlFailed:{
-            errorText.text = error;
-            errorTitle.visible = true;
+    Connections{
+        target: AppController
+        function onAppReady(){
+            userApp.reset();
             krakenRoot.mode = 3;
         }
-        onAppReady:{
-            userApp.reset();
+        function onQmlFailed(error) {
+            errorText.text = error;
+            errorTitle.visible = true;
             krakenRoot.mode = 3;
         }
     }
@@ -1339,10 +1297,11 @@ Rectangle {
             repeat: false
             running: false
             onTriggered: {
-                KrakenZDriver.setImage(imageSource);
+                KrakenImageProvider.loadImage(imageSource);
             }
         }
         Component.onCompleted: {
+            SystemTray.preventCloseAppWithWindow();
             KrakenZDriver.setBuiltIn(1);
             imageSetTimer.imageSource = ":/images/Peyton.png";
             krakenRoot.mode = 1;
