@@ -7,5 +7,6 @@
         <file>qml/KrakenZConfigure.qml</file>
         <file>qml/MissingDevice.qml</file>
         <file>qml/PermissionDenied.qml</file>
+        <file>qml/KrakenZContainer.qml</file>
     </qresource>
 </RCC>

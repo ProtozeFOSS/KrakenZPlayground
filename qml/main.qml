@@ -10,6 +10,10 @@ Window {
     minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
+
+    onVisibleChanged: {
+        KrakenImageProvider.setDisplayVisible(visible);
+    }
     Rectangle { // Main content container
         id: container
         anchors.fill: parent
@@ -122,6 +126,7 @@ Window {
             }
         }
     }
+
     Component.onCompleted: {
         SystemTray.setVisible();
     }

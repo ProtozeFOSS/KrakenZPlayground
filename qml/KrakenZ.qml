@@ -1,10 +1,9 @@
 import QtQuick 2.15
 import QtQml.Models 2.15
-import QtQuick.Dialogs 1.2
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.platform 1.1
-
+import OffscreenApp 1.0
 Rectangle {
     id: krakenRoot
     color: "#2a2e31"
@@ -26,7 +25,7 @@ Rectangle {
             topMargin: 4
         }
         leftPadding: 16
-        text: "Kraken Z73"
+        text: "Kraken Z3"
     }
 
     Rectangle{
@@ -237,19 +236,11 @@ Rectangle {
             krakenPreview.grabToImage(
                function(result) {
                    krakenPreview.frame = !krakenPreview.frame
-                   KrakenImageProvider.loadImage(result.image);
+                   AppController.loadImage(result.image);
                });
         }
-
-        animationImage.onPlayingChanged: {
-            if( animationImage.playing){
-                KrakenZDriver.startMonitoringFramerate();
-            }else {
-                KrakenZDriver.stopMonitoringFramerate();
-            }
-        }
-
     }
+
     Item{
         id:imageOut
         anchors.centerIn: krakenPreview
@@ -263,8 +254,35 @@ Rectangle {
             radius:width
             opacity:0
         }
+
+        Text{
+            function reset(){
+                errorTitle.visible = false;
+                errorText.text = "";
+            }
+            id:errorTitle
+            anchors.top:parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: 16
+            text:"QML Error"
+            color:"lightblue"
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 24
+            visible:false
+        }
+
+        Text{
+            id:errorText
+            anchors.centerIn:parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            color:"white"
+            width:280
+            wrapMode:Text.WrapAnywhere
+            visible:errorTitle.visible
+        }
         Rectangle{
-            visible: krakenRoot.showFPS & (KrakenZDriver.fps > 1)
+            visible: KrakenZDriver.monitorFPS
             anchors.bottom:parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
             height: 28
@@ -296,7 +314,7 @@ Rectangle {
     }
     Rectangle{
         id:builtinMode
-        visible: krakenRoot.mode == 2
+        visible: AppController.mode == AppMode.BUILT_IN
         anchors.centerIn: krakenPreview
         width:320
         height:320
@@ -320,7 +338,7 @@ Rectangle {
         width:48
         height:width
         radius:width
-        visible:krakenPreview.animated
+        visible:AppController.mode === AppMode.GIF_MODE
         anchors{
             bottom:krakenPreview.bottom
             right:krakenPreview.right
@@ -331,7 +349,7 @@ Rectangle {
             height: 32
             width:32
             anchors.centerIn: parent
-            source: "qrc:/images/pause.svg"
+            source: AppController.animationPlaying ?  "qrc:/images/pause.svg" : "qrc:/images/play.svg"
             antialiasing: true
             smooth: true
         }
@@ -340,25 +358,20 @@ Rectangle {
         MouseArea{
             anchors.fill: parent
             onClicked: {
-                krakenPreview.animationImage.playing = !krakenPreview.animationImage.playing
-                if(krakenPreview.animationImage.playing) {
-                    ppIcon.source = "qrc:/images/pause.svg"
-                } else {
-                    ppIcon.source = "qrc:/images/play.svg"
-                }
+                AppController.animationPlaying = !AppController.animationPlaying
             }
         }
     }
 
     Rectangle{
         id: qmlOptions
-        visible: krakenRoot.mode == 3
+        visible: AppController.mode >= AppMode.GIF_MODE
         color: "#8d8d8d"
         anchors.top:krakenPreview.bottom
         anchors.topMargin: 8
         radius:6
         border.color: "#004d4d4d"
-        height:190
+        height:206
         anchors.left: krakenPreview.left
         anchors.right: krakenPreview.right
         Text{
@@ -411,45 +424,42 @@ Rectangle {
                 radius:4
                 height:32
                 width:parent.width - 8
-                color:krakenRoot.drawFPS ? "red" : "#cc03d429"
+                color:KrakenZDriver.monitorFPS ? "red" : "#cc03d429"
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text{
                     anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    text:krakenRoot.drawFPS ? "Do Not Draw FPS" : "Draw FPS";
+                    text:KrakenZDriver.monitorFPS ? "Stop Tracking FPS" : "Track FPS";
                     color:"white"
                 }
                 MouseArea{
                     anchors.fill: parent
                     onClicked:{
-                        krakenRoot.drawFPS = !krakenRoot.drawFPS;
+                        KrakenZDriver.monitorFPS = !KrakenZDriver.monitorFPS;
+                        if(!KrakenZDriver.monitorFPS) {
+                            AppController.drawFPS = false;
+                        } else {
+                            AppController.drawFPS = drawCheck.checked;
+                        }
                     }
                 }
             }
             Rectangle{
                 border.color: "black"
                 radius:4
-                height:32
+                visible: KrakenZDriver.monitorFPS
+                height:42
                 width:parent.width - 8
-                color:krakenRoot.showFPS ? "red" : "#cc03d429"
+                color:AppController.drawFPS ? "red" : "#cc03d429"
                 anchors.horizontalCenter: parent.horizontalCenter
-                Text{
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text:krakenRoot.showFPS ? "Hide FPS" : "Show FPS";
-                    color:"white"
-                }
-                MouseArea{
-                    anchors.fill: parent
-                    onClicked:{
-                        krakenRoot.showFPS = !krakenRoot.showFPS;
-                        if(krakenRoot.showFPS) {
-                            KrakenZDriver.startMonitoringFramerate();
-                        } else {
-                            KrakenZDriver.stopMonitoringFramerate();
-                        }
+                CheckBox{
+                    id: drawCheck
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    checked: AppController.drawFPS
+                    text: "Draw FPS on LCD";
+                    onCheckedChanged: {
+                        AppController.drawFPS = checked;
                     }
                 }
             }
@@ -965,7 +975,7 @@ Rectangle {
         }
 
         onValueChanged: {
-            KrakenZDriver.setRotationOffset(value);
+            AppController.setOrientationFromAngle(value);
         }
 
         height: 36
@@ -1043,8 +1053,9 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    fileLoader.folder = ApplicationPath +  "/images";
-                    console.log("Setting Folder to: " + fileLoader.folder)
+                    if(fileLoader.folder.length == 0){
+                        fileLoader.folder = ApplicationPath +  "/images/";
+                    }
                     fileLoader.filterIndex = 0;
                     fileLoader.active = true;
                 }
@@ -1064,12 +1075,7 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    if(KrakenZDriver.content){
-                        KrakenZDriver.clearContentItem();
-                    }
-                    krakenRoot.mode = 2;
-                    krakenPreview.animated = false;
-                    krakenPreview.animationImage.playing = false;
+                    AppController.setBuiltIn();
                     KrakenZDriver.setNZXTMonitor();
                 }
             }
@@ -1088,8 +1094,9 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    fileLoader.folder = ApplicationPath +  "/examples";
-                    console.log("Setting Folder to: " +  fileLoader.folder)
+                    if(fileLoader.folder.length == 0){
+                        fileLoader.folder = ApplicationPath +  "/examples/";
+                    }
                     fileLoader.filterIndex = 1;
                     fileLoader.active = true;
                 }
@@ -1109,12 +1116,7 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    if(KrakenZDriver.content){
-                        KrakenZDriver.clearContentItem();
-                    }
-                    krakenRoot.mode = 2;
-                    krakenPreview.animated = false;
-                    krakenPreview.animationImage.playing = false;
+                    AppController.setBuiltIn();
                     KrakenZDriver.setBuiltIn(1);
                 }
             }
@@ -1144,33 +1146,20 @@ Rectangle {
         id: fileLoader
         active: false
         property int filterIndex : 0
-        property string folder: "/images"
+        property string folder:""
         sourceComponent: FileDialog{
             nameFilters:["Image Files (*.jpg *.jpeg *.png *.gif *.tif *.svg)", "Qml Application (*.qml)", "Something Else?(*.*)"]
             selectedNameFilter.index: fileLoader.filterIndex
-            folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
             onAccepted: {
                 if(files.length > 0){
                     krakenRoot.selectedPath = files[0].toString();
+                    fileLoader.folder = folder;
                     if(krakenRoot.selectedPath.indexOf(".qml") >= 0){ // app
-                        console.log("Loading Qml File: " + krakenRoot.selectedPath);
+                        console.log("Loading Qml: " + krakenRoot.selectedPath);
                         AppController.loadQmlFile(krakenRoot.selectedPath)
-                        krakenPreview.animated = false;
-                        krakenPreview.animationImage.playing = false;
                     }else{
-                        console.log("Setting image file path: " + krakenRoot.selectedPath);
-                        if(files[0].toString().indexOf(".gif") >= 0){ // animated image
-                            krakenPreview.animationImage.source = krakenRoot.selectedPath;
-                            krakenPreview.animated = true;
-                            krakenPreview.animationImage.playing = true;
-                            krakenRoot.mode = 4;
-                        }else { // else try to open as an image
-                            KrakenZDriver.clearContentItem();
-                            krakenPreview.animated = false;
-                            krakenPreview.animationImage.playing = false;
-                            KrakenImageProvider.loadImage(krakenRoot.selectedPath);
-                            krakenRoot.mode = 1;
-                        }
+                        console.log("Setting image: " + krakenRoot.selectedPath);
+                        AppController.loadImage(krakenRoot.selectedPath);
                     }
                 }
                 fileLoader.active = false;
@@ -1179,10 +1168,10 @@ Rectangle {
                 fileLoader.active = false;
             }
         }
-        onItemChanged: {
-            if(item){
-                console.log("opening @ " + fileLoader.folder)
-                item.open(fileLoader.folder)
+        onStatusChanged: {
+            if(status == Loader.Ready) {
+                item.folder = AppController.getLocalFolderPath(fileLoader.folder);
+                item.open(item.folder)
             }
         }
     }
@@ -1214,13 +1203,15 @@ Rectangle {
     Connections{
         target: AppController
         function onAppReady(){
-            userApp.reset();
-            krakenRoot.mode = 3;
+            errorTitle.reset();
         }
+        function onModeChanged(mode) {
+            errorTitle.reset();
+        }
+
         function onQmlFailed(error) {
             errorText.text = error;
             errorTitle.visible = true;
-            krakenRoot.mode = 3;
         }
     }
 
@@ -1234,32 +1225,6 @@ Rectangle {
             anchors.fill: parent
         }
 
-        function reset(){
-            errorTitle.visible = false;
-            errorText.text = "";
-        }
-        Text{
-            id:errorTitle
-            anchors.top:parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: 16
-            text:"QML Error"
-            color:"lightblue"
-            horizontalAlignment: Text.AlignHCenter
-            font.pixelSize: 24
-            visible:false
-        }
-
-        Text{
-            id:errorText
-            anchors.centerIn:parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            color:"white"
-            width:280
-            wrapMode:Text.WrapAnywhere
-            visible:errorTitle.visible
-        }
         Rectangle{
             visible:krakenRoot.drawFPS
             anchors.bottom:parent.bottom
@@ -1297,7 +1262,7 @@ Rectangle {
             repeat: false
             running: false
             onTriggered: {
-                KrakenImageProvider.loadImage(imageSource);
+                AppController.loadImage(imageSource);
             }
         }
         Component.onCompleted: {

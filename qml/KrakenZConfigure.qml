@@ -49,7 +49,7 @@ Rectangle{
         }
         // 90
         Rectangle {
-            color:KrakenZDriver.rotationOffset == 270 ? "#b37dc791":"#66596973"
+            color:krakenWhiteRing.rotation == 270 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -69,7 +69,7 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: {KrakenZDriver.rotationOffset =  270; krakenWhiteRing.rotation = 270;}
+                onClicked: {krakenWhiteRing.rotation = 270;}
             }
         }
 
@@ -87,7 +87,7 @@ Rectangle{
 
         // 0
         Rectangle {
-            color: KrakenZDriver.rotationOffset == 0 ? "#b37dc791":"#66596973"
+            color: krakenWhiteRing.rotation == 0 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -107,12 +107,12 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: KrakenZDriver.rotationOffset =  krakenWhiteRing.rotation = 0;
+                onClicked: krakenWhiteRing.rotation = 0;
             }
         }
         // 270
         Rectangle {
-            color:KrakenZDriver.rotationOffset == 90 ? "#b37dc791":"#66596973"
+            color:krakenWhiteRing.rotation == 90 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -132,12 +132,12 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: {KrakenZDriver.rotationOffset =  90; krakenWhiteRing.rotation = 90;}
+                onClicked: {krakenWhiteRing.rotation = 90;}
             }
         }
         // 180
         Rectangle {
-            color:KrakenZDriver.rotationOffset == 180 ? "#b37dc791":"#66596973"
+            color:krakenWhiteRing.rotation == 180 ? "#b37dc791":"#66596973"
             width: 88
             height:72
             anchors{
@@ -157,7 +157,7 @@ Rectangle{
             }
             MouseArea{
                 anchors.fill: parent
-                onClicked: {KrakenZDriver.rotationOffset =  180; krakenWhiteRing.rotation = 180;}
+                onClicked: {krakenWhiteRing.rotation = 180;}
             }
         }
     }
@@ -301,6 +301,7 @@ Rectangle{
             anchors.fill: parent
             onClicked: {
                 configureTop.configured()
+                AppController.setOrientationFromAngle(krakenWhiteRing.rotation)
                 KrakenZDriver.setBrightness(configureTop.brightness)
             }
         }

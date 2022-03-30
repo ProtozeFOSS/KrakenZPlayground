@@ -37,30 +37,28 @@ class OffscreenAppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickItem* container  NOTIFY containerChanged MEMBER mContainer)
-
     // Qml "Animation" frameRate, ideally matches near draw rate
     Q_PROPERTY(int frameDelay READ frameDelay WRITE setFrameDelay NOTIFY frameDelayChanged MEMBER mFrameDelay)
     // Screen Size
     Q_PROPERTY(QSize screenSize READ screenSize WRITE setScreenSize NOTIFY screenSizeChanged MEMBER mSize)
-    //Q_PROPERTY(Qt::ScreenOrientation orientation READ orientation WRITE setOrientation MEMBER mOrientation)
+    Q_PROPERTY(Qt::ScreenOrientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged MEMBER mOrientation);
     // Screen Format
-    Q_PROPERTY(int depthSize READ depthSize WRITE setDepthSize NOTIFY depthSizeChanged MEMBER mDepthSize)
-    Q_PROPERTY(int stencilSize READ stencilSize WRITE setStencilSize NOTIFY stencilSizeChanged MEMBER mStencilSize)
-    Q_PROPERTY(int alphaSize READ alphaSize WRITE setAlphaSize NOTIFY alphaSizeChanged MEMBER mAlphaSize)
-    Q_PROPERTY(int blueSize READ blueSize WRITE setBlueSize NOTIFY blueSizeChanged MEMBER mBlueSize)
-    Q_PROPERTY(int redSize READ redSize WRITE setRedSize NOTIFY redSizeChanged MEMBER mRedSize)
-    Q_PROPERTY(int greenSize READ greenSize WRITE setGreenSize NOTIFY greenSizeChanged MEMBER mGreenSize)
     Q_PROPERTY(int currentFPS READ currentFPS NOTIFY fpsChanged MEMBER mFPS)
-    Q_PROPERTY(bool active READ isActive WRITE setActive NOTIFY activeChanged MEMBER mActive)
-
+    Q_PROPERTY(AppMode mode READ mode NOTIFY modeChanged MEMBER mMode)
+    Q_PROPERTY(bool drawFPS READ drawFPS WRITE setDrawFPS NOTIFY drawFPSChanged MEMBER mDrawFPS)
+    Q_PROPERTY(QString loadedPath READ loadedPath NOTIFY loadedPathChanged MEMBER mLoadedPath)
+    Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
 
 public:
     OffscreenAppController(QObject* controller, QObject* parent = nullptr);
     ~OffscreenAppController();
+    enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
+    Q_ENUM(AppMode)
+    AppMode mode() {return mMode; }
     Q_INVOKABLE bool loadQmlFile(QString path);
     void  initialize();
     bool  event(QEvent *event) override;
-    bool  isActive() { return mActive; }
+    bool  animationPlaying() { return mPlaying; }
     QSize screenSize() { return mSize; }
     int   currentFPS() { return mFPS; }
     int   depthSize() { return mDepthSize; }
@@ -71,43 +69,53 @@ public:
     int   greenSize() { return mGreenSize; }
     int   frameDelay() { return mFrameDelay; }
     void  setPrimaryScreen(QScreen* screen);
-
-signals:
-    void containerChanged(QQuickItem* container);
-    void activeChanged(bool active);
-    void appReady();
-    void qmlFailed(QString error);
-    void frameDelayChanged(int frame_delay);
-    void screenSizeChanged(QSize size);
-    void depthSizeChanged(int depth_size);
-    void stencilSizeChanged(int depth_size);
-    void alphaSizeChanged(int alpha_size);
-    void redSizeChanged(int red_size);
-    void greenSizeChanged(int green_size);
-    void blueSizeChanged(int blue_size);
-    void fpsChanged(int fps);
-    void frameReady(QImage frame);
-
-public slots:
-    void setActive(bool active);
-    void setFrameDelay(int frame_delay);
-    void setScreenSize(QSize screen_size);
+    Qt::ScreenOrientation orientation() { return mOrientation; }
+    bool drawFPS() { return mDrawFPS; }
     void setDepthSize(int depth_size);
     void setStencilSize(int stencil_size);
     void setAlphaSize(int alpha_size);
     void setRedSize(int red_size);
     void setBlueSize(int blue_size);
     void setGreenSize(int green_size);
+    Q_INVOKABLE void setOrientationFromAngle(int angle);
+    Q_INVOKABLE QString getLocalFolderPath(QString path);
+    QString loadedPath() { return mLoadedPath; }
+
+signals:
+    void containerChanged(QQuickItem* container);
+    void animationPlayingChanged(bool animation);
+    void appReady();
+    void qmlFailed(QString error);
+    void frameDelayChanged(int frame_delay);
+    void screenSizeChanged(QSize size);
+    void fpsChanged(int fps);
+    void frameReady(QImage frame);
+    void orientationChanged(Qt::ScreenOrientation orientation);
+    void modeChanged(OffscreenAppController::AppMode mode);
+    void loadGIFPrompt(QString file_path);
+    void drawFPSChanged(bool draw_fps);
+    void loadedPathChanged(QString path);
+
+public slots:
+    void setBuiltIn();
+    void setFrameDelay(int frame_delay);
+    void setScreenSize(QSize screen_size);
+    void setOrientation(Qt::ScreenOrientation orientation);
+    void setDrawFPS(bool draw_fps);
+    void loadImage(QString file_path);
+    void setAnimationPlaying(bool playing = true);
 
 protected slots:
     void userComponentReady();
+    void containerComponentReady();
     void renderNext();
 
 protected:
-    QObject* mController;
+    QObject*       mController;
     QQuickItem*    mContainer;
     QQuickItem*    mCurrentApp;
     QQmlComponent* mCurrentComponent;
+    QQmlComponent* mContainerComponent;
 
     // Offscreen rendering
     QOffscreenSurface*         mOffscreenSurface;
@@ -116,6 +124,7 @@ protected:
     QQuickWindow*              mOffscreenWindow;
     QOpenGLFramebufferObject*  mFBO;
     QQmlApplicationEngine*     mAppEngine;
+    Qt::ScreenOrientation      mOrientation;
 
     // controlling the state
     int mFrameDelay;
@@ -135,8 +144,15 @@ protected:
     QObject* mPrimaryScreen;
     QTimer*  mDelayTimer;
     qreal    mDPR;
+    AppMode  mMode;
+    bool     mDrawFPS;
+    bool     mPlaying;
+    QString  mLoadedPath;
 
     void adjustAnimationDriver();
+    void createApplication();
+    void createContainer();
+    void setMode(AppMode mode);
     void reconfigureSurfaceFormat();
 };
 

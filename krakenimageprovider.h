@@ -17,8 +17,8 @@ signals:
     void imageReady();
 
 public slots:
+    void setDisplayVisible(bool visible);
     void imageChanged(QImage frame);
-    void loadImage(QString file_path);
 protected:
     QImage             mImageBuffer;
     KrakenZDriver*     mDevice;

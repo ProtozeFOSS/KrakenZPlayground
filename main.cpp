@@ -10,7 +10,6 @@
 #include <QProcess>
 #include <iostream>
 
-
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -19,6 +18,7 @@ int main(int argc, char *argv[])
     // Get Settings location
     // One Version is the application another is the runner
 
+    qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
     KrakenZDriver krakenDevice(&app); // if for some reason you need different PID (z63?), pass it in here
@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
     appController.setScreenSize(QSize(320,320));
     appController.setStencilSize(16);
     appController.initialize();
+    QObject::connect(&appController, &OffscreenAppController::orientationChanged,
+                     &krakenDevice,  &KrakenZDriver::setScreenOrientation);
     SystemTray  systemTray(&app);
     QPixmap iconPixmap(":/images/Droplet.png");
     auto icon = QIcon(iconPixmap);
@@ -40,17 +42,20 @@ int main(int argc, char *argv[])
     previewProvider->setKrakenDevice(&krakenDevice);
     QObject::connect(&appController, &OffscreenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
     QQmlApplicationEngine engine;
-    engine.addImageProvider("krakenz", previewProvider);
+    engine.addImageProvider("krakenz", previewProvider); // will be owned by the engine
     engine.rootContext()->setContextProperty("AppController", &appController);
     engine.rootContext()->setContextProperty("KrakenZDriver", &krakenDevice);
     engine.rootContext()->setContextProperty("SystemTray", &systemTray);
     engine.rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
     engine.rootContext()->setContextProperty("ApplicationPath", app.applicationDirPath());
     systemTray.setEngine(&engine);
-    const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
+    QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [&engine, icon,&appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
+        if(objUrl.toString().endsWith(QStringLiteral("clear")))
+            return;
+
+        if ((!obj && url == objUrl) ) {
             std::cerr << "Failed to load main.qml\n";
             QCoreApplication::exit(-1);
         }
@@ -76,5 +81,10 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     engine.load(url);
 
-    return app.exec();
+    auto ret_val{app.exec()};
+    url = QUrl(QStringLiteral("clear"));
+    engine.load(url);
+    engine.clearComponentCache();
+    engine.collectGarbage();
+    return ret_val;
 }

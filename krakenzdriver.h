@@ -31,12 +31,11 @@ class KrakenZDriver : public QObject
     Q_PROPERTY( quint8 fanDuty READ fanDuty WRITE setFanDuty NOTIFY fanDutyChanged MEMBER mFanDuty)
     Q_PROPERTY( QString version READ version NOTIFY versionChanged MEMBER mVersion)
     Q_PROPERTY( QString fwInfo READ fwInfo NOTIFY fwInfoChanged MEMBER mFwInfo)
-    Q_PROPERTY( int rotationOffset READ rotationOffset WRITE setRotationOffset NOTIFY rotationOffsetChanged MEMBER mRotationOffset)
+    Q_PROPERTY( int rotationOffset READ rotationOffset NOTIFY rotationOffsetChanged MEMBER mRotationOffset)
     Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged MEMBER mFPS)
-    Q_PROPERTY( QQuickItem* content READ content WRITE setContent NOTIFY contentChanged MEMBER mContent)
     Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged MEMBER mBrightness)
     Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged MEMBER mImageIndex)
-    Q_PROPERTY( quint32 frameDelay READ frameDelay WRITE setFrameDelay NOTIFY frameDelayChanged MEMBER mFrameDelay)
+    Q_PROPERTY( bool monitorFPS READ monitorFPS WRITE setMonitorFPS NOTIFY monitorFPSChanged)
 public:
     explicit KrakenZDriver(QObject *parent = nullptr, quint16 VID = 0x1e71, quint16 PID = 0x3008);
     static quint16 calculateMemoryStart(quint8 index);
@@ -50,10 +49,9 @@ public:
     QString fwInfo() { return mFwInfo; }
     short bucket() { return mImageIndex; }
     int     rotationOffset() { return mRotationOffset; }
-    quint32 frameDelay() { return mFrameDelay; }
-    QQuickItem* content() { return mContent; }
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
+    bool monitorFPS() { return mMeasure.isActive(); }
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
@@ -105,62 +103,42 @@ public:
 signals:
     void foundChanged(bool found);
     void fpsChanged(qreal fps);
-    void contentChanged(QQuickItem* content);
     void liquidTemperatureChanged(qreal temperature);
     void pumpSpeedChanged(quint16 pump_rpm);
     void brightnessChanged(quint8 brightness);
-    void frameDelayChanged(quint32 frameDelay);
     void fanSpeedChanged(quint16 fan_rpm);
     void pumpDutyChanged(quint8 duty_percent);
     void fanDutyChanged(quint8 duty_percent);
     void fwInfoChanged(QString fwInfo);
     void versionChanged(QString version);
     void deviceReady();
-    void usbMessage(QJsonObject message);
     void rotationOffsetChanged(int rotation);
     void error(QJsonObject response);
-    void imageTransfered(QImage frame);
     void bucketChanged(quint8 bucket);
+    void monitorFPSChanged(bool monitor);
 
 public slots:
     void initialize();
     void startMonitoringFramerate();
     void stopMonitoringFramerate();
-    void setContent(QQuickItem* content);
-    void setFrameDelay(quint32 frameDelay);
-    void clearContentItem();
-    void setRotationOffset(int rotation);
     void setBrightness(quint8 brightness);
     void setFanDuty(quint8 duty);
     void setPumpDuty(quint8 duty); // flat
-    void setImage(QString filepath, quint8 index = 0, bool applyAfterSet = true);
     void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true);
     void sendStatusRequest();
     void sendHex(QString hex_data, bool pad = true);
     void moveToBucket( int bucket = 0);
     void setNZXTMonitor();
     void setBuiltIn(quint8 index);
+    void setScreenOrientation(Qt::ScreenOrientation orientation);
     void blankScreen();
+    void setMonitorFPS(bool monitor = true);
 
 protected slots:
     void receivedControlResponse();
-    void imageReady();
-    void imageChunkWritten(qint64 bytes);
-    void prepareNextFrame();
     void updateFrameRate();
-    void frameChunkWritten(qint64 bytes);
 
 protected:
-#ifdef DEVELOPER_MODE
-    void printQueryBucket(QByteArray & data);
-    void printConfigBucket(QByteArray & data);
-    void printSetupBucket(QByteArray & data);
-    void printWriteBucket(QByteArray & data);
-    void printSwitchBucket(QByteArray & data);
-    void printFWRequest(QByteArray & data);
-    void printStatusRequest(QByteArray & data);
-    void parseResponseMessage(QByteArray& data);
-#endif
     void parseFWVersion(QByteArray& data);
     void parseStatus(QByteArray& data);
     void parseDeleteBucket(QByteArray& data);
@@ -201,7 +179,6 @@ protected:
     int     mRotationOffset; // lcd rotation offset
 
     // Write Buffer
-    QQuickItem*         mContent;
     QString             mFilePath;
     QSharedPointer<QQuickItemGrabResult> mResult;
     short               mBufferIndex; // buffer index
@@ -216,7 +193,6 @@ protected:
     short               mFrames;
     quint32             mFrameDelay;
     qreal               mFPS;
-    QTimer              mDelayTimer;
 
 };
 

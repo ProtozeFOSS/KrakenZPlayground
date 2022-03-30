@@ -23,33 +23,10 @@ void KrakenImageProvider::imageChanged(QImage frame)
     }
 }
 
-void KrakenImageProvider::loadImage(QString file_path)
-{
-    QImage image;
-#ifdef Q_OS_WIN
-    file_path = file_path.replace("file:///","");
-#else
-    filepath = filepath.replace("file://","");
-#endif
-    if(image.load(file_path)){
-        // enforce size
-        if(image.width() != 320 || image.height() != 320){
-            mImageBuffer = image.scaled(320,320);
-        } else {
-            mImageBuffer = image;
-        }
-
-        QTransform rotation;
-        rotation.rotate(270); // rotate to software defined display rotation
-        mImageBuffer = mImageBuffer.transformed(rotation);
-        if(mDevice) {
-            mDevice->setImage(mImageBuffer , mDevice->bucket() ^ 1);
-        }
-        if(mDisplaying) {
-            emit imageReady();
-        }
-    }
+void KrakenImageProvider::setDisplayVisible(bool visible){
+    mDisplaying = visible;
 }
+
 
 QImage KrakenImageProvider::requestImage(const QString &id, QSize *size, const QSize &requested_size)
 {

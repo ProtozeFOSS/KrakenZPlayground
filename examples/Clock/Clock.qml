@@ -12,7 +12,9 @@ Rectangle {
         minutes = date.getMinutes()
         seconds = date.getSeconds();
     }
-    anchors.fill: parent
+    height:240
+    width: 240
+    anchors.centerIn: parent;
     color:"black"
     Timer {
         interval: 100; running: true; repeat: true;

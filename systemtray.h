@@ -29,6 +29,9 @@ protected:
     QSystemTrayIcon*       mTrayIcon;
     QMenu*                 mMenu;
     QAction*               mQuitAction;
+    QAction*               mAppBanner;
+protected slots:
+    void showMainWindow();
 
 };
 
