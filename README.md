@@ -8,7 +8,7 @@ Through the application the user can change pump speeds, fan speeds and brightne
 [Download and try 1.bV2](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.bV2)  *now with background rendering goodness!*
 
 # Discussion for App development and bugs
-Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/zTrAYseK)
+Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/mCGx8FZP3M)
 
 # Cool Community projects
  - So empty.... 
