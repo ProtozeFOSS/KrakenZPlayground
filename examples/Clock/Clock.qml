@@ -5,21 +5,20 @@ Rectangle {
     property int hours
     property int minutes
     property int seconds
-
-    function timeChanged() {
-        var date = new Date;
-        hours = date.getHours()
-        minutes = date.getMinutes()
-        seconds = date.getSeconds();
+    Connections {
+        target: AppController
+        function onDraw() {
+            var date = new Date;
+            hours = date.getHours()
+            minutes = date.getMinutes()
+            seconds = date.getSeconds();
+        }
     }
+    clip:true
     height:240
     width: 240
     anchors.centerIn: parent;
     color:"black"
-    Timer {
-        interval: 100; running: true; repeat: true;
-        onTriggered: clock.timeChanged()
-    }
     Image { anchors.centerIn: parent; width:400; height:364; fillMode: Image.PreserveAspectFit; source: "clock-night.png"; visible: true }
 
     Image {
@@ -74,4 +73,7 @@ Rectangle {
         height:width
     }
 
+    Component.onCompleted: {
+        AppController.setFrameDelay(400);
+    }
 }

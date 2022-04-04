@@ -4,6 +4,7 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.platform 1.1
 import OffscreenApp 1.0
+import QtGraphicalEffects 1.15
 Rectangle {
     id: krakenRoot
     color: "#2a2e31"
@@ -239,7 +240,20 @@ Rectangle {
                    AppController.loadImage(result.image);
                });
         }
+        layer.enabled:true
+        layer.effect:DropShadow{
+            transparentBorder: true
+            source:krakenPreview
+            anchors.fill: krakenPreview
+            horizontalOffset: 2
+            verticalOffset: 10
+            radius: 16
+            spread:0
+            samples:32
+            color: "#000000"
+        }
     }
+
 
     Item{
         id:imageOut
@@ -939,7 +953,7 @@ Rectangle {
             right:rightOrientationLabel.left
         }
         snapMode:Slider.SnapAlways
-        live:true
+        live:false
         from: 0
         to: 270
         stepSize:90
@@ -980,18 +994,46 @@ Rectangle {
 
         height: 36
     }
+
+    CheckBox{
+        id: unlockRotation
+        width:24
+        height:24
+        anchors{
+            verticalCenter: orientationValue.verticalCenter
+            left:parent.left
+            leftMargin:18
+        }
+        checked: true
+        onCheckedChanged: {
+            setOrientationSlider.stepSize = checked ? 90:1;
+        }
+    }
+    Text{
+        anchors{
+            left:unlockRotation.right
+            leftMargin:8
+            verticalCenter:unlockRotation.verticalCenter
+        }
+        text:unlockRotation.checked ? "Unlock step size":"Lock step to 90"
+        color:"white"
+        font.pixelSize: 16
+        horizontalAlignment: Text.AlignLeft
+        verticalAlignment: Text.AlignVCenter
+    }
+
     Text{
         id: orientationValue
         color:"white"
-        text:setOrientationSlider.value + "%"
+        text:setOrientationSlider.value + "°"
         font.pixelSize: 16
         font.bold: true
         anchors{
-            horizontalCenter: setOrientationSlider.horizontalCenter
+            right: setOrientationSlider.right
             top:setOrientationSlider.bottom
             topMargin: 2
         }
-        horizontalAlignment: Text.AlignHCenter
+        horizontalAlignment: Text.AlignRight
         verticalAlignment: Text.AlignVCenter
     }
 
@@ -1267,8 +1309,9 @@ Rectangle {
         }
         Component.onCompleted: {
             SystemTray.preventCloseAppWithWindow();
+            AppController.initializeOffScreenWindow();
             KrakenZDriver.setBuiltIn(1);
-            imageSetTimer.imageSource = ":/images/Peyton.png";
+            imageSetTimer.imageSource = "qrc:/images/Peyton.png";
             krakenRoot.mode = 1;
             imageSetTimer.start();
         }

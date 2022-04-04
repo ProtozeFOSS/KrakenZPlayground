@@ -316,4 +316,8 @@ Rectangle{
         color: "#00f521"
         radius:1
     }
+
+    Component.onCompleted: {
+        AppController.setFrameDelay(200);
+    }
 }

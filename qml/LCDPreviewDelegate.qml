@@ -4,7 +4,6 @@ import QtGraphicalEffects 1.15
 Rectangle {
     id:background
     property bool animated: false
-    rotation:KrakenZDriver.rotationOffset
     property int bufferIndex: 0
     Connections{
         target: KrakenImageProvider
@@ -93,6 +92,7 @@ Rectangle {
     }
     OpacityMask{
         id:opacityMask
+        rotation:KrakenZDriver.rotationOffset
         maskSource:previewCircle
         source: sourceImage0
         anchors.centerIn: parent

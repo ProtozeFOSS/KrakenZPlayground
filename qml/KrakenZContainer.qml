@@ -2,6 +2,7 @@ import QtQuick 2.15
 import OffscreenApp 1.0
 Rectangle {
     id: background
+    color:"black"
     Connections{
         target:AppController
         function onModeChanged(mode) {
@@ -19,8 +20,6 @@ Rectangle {
             }
         }
     }
-
-    color: "black"
     x:-1
     y:-1
     width:322;
@@ -28,7 +27,7 @@ Rectangle {
     rotation:-1*KrakenZDriver.rotationOffset
     Rectangle{
         id:appContainer
-        color:"transparent"
+        color:"black"
         anchors.centerIn:parent
         width:320
         height:320
@@ -39,19 +38,28 @@ Rectangle {
         id: animatedImage
         smooth: true
         visible: AppController.mode == AppMode.GIF_MODE
-        cache: true
+        cache: false
         fillMode: Image.PreserveAspectCrop
         source:AppController.mode == AppMode.GIF_MODE ?  AppController.loadedPath:""
         playing:AppController.animationPlaying && animatedImage.visible
         anchors.centerIn: parent
         width:320
         height:320
-        onFrameChanged: {
+        onFrameChanged:{
             AppController.renderNext();
         }
-
     }
-
+    Image{
+        id: image
+        smooth: true
+        visible: AppController.mode == AppMode.STATIC_IMAGE
+        cache: false
+        fillMode: Image.PreserveAspectCrop
+        source:AppController.mode == AppMode.STATIC_IMAGE ?  AppController.loadedPath:""
+        anchors.centerIn: parent
+        width:320
+        height:320
+    }
     Rectangle{
         id: fpsDisplay
         visible:AppController.drawFPS

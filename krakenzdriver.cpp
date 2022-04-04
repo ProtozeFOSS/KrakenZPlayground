@@ -96,7 +96,7 @@ void KrakenZDriver::initialize()
                     qDebug() << "Failed to open control endpoints: " << mLCDIN->errorString() << " : " << mLCDCTL->errorString();
                     qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
                 } else { // continue if sccuessfully opened device
-                    sendStatusRequest();
+                    sendFWRequest();
                     mInitialized = true;
                     memset(mFrameOut,0,IMAGE_FRAME_SIZE);
                     errored = false;
@@ -116,6 +116,7 @@ void KrakenZDriver::initialize()
     } else {
         emit deviceReady();
     }
+
 }
 void KrakenZDriver::moveToBucket(int bucket)
 {
@@ -220,9 +221,11 @@ void KrakenZDriver::parseFWVersion(QByteArray &data)
     if(data.size() >= 20)
     {
         QString fw("0.0.0");
-        fw[0] = QString::number(data.at(17)).at(0);fw[2]=QString::number(data.at(18)).at(0);fw[4]= QString::number(data.at(19)).at(0);
-        qDebug() << "KRAKEN FW Version: v" << fw;
+        fw[0] = QString::number(data.at(17)).at(0);
+        fw[2]=QString::number(data.at(18)).at(0);
+        fw[4]= QString::number(data.at(19)).at(0);
         mVersion = fw;
+        qDebug() << "KRAKEN FW Version: v" << mVersion;
         emit fwInfoChanged(mVersion);
     }
 }
@@ -477,10 +480,10 @@ void KrakenZDriver::sendHex(QString hex_data, bool pad)
 void KrakenZDriver::sendFWRequest()
 {
 
-    QByteArray request_fw;
-    request_fw.fill(0x0, _WRITE_LENGTH - 2 );
-    request_fw.prepend(0x01);
-    request_fw.prepend(FW_VERSION);
+    QByteArray request_fw;    
+    request_fw.fill(0x0, _WRITE_LENGTH);
+    request_fw[0] = FW_INFO;
+    request_fw[1] = FW_REQUEST;
     mLCDCTL->write(request_fw);
 }
 
@@ -584,6 +587,14 @@ void KrakenZDriver::sendQueryBucket(quint8 index, quint8 asset)
 }
 
 
+void KrakenZDriver::setRotationOffset(int offset)
+{
+    if(mRotationOffset != offset) {
+        mRotationOffset = offset;
+        emit rotationOffsetChanged(offset);
+    }
+}
+
 void KrakenZDriver::receivedControlResponse()
 {
    auto data = mLCDIN->readAll();
@@ -603,8 +614,18 @@ void KrakenZDriver::receivedControlResponse()
            parseStatus(data);
            break;
        }
+       case RESPONSE_SWITCH_BUCKET:
+       case QUERY_RESPONSE:
+       case CONFIRM_RESPONSE:
+           break;
        default:
        {
+           QByteArray cmd;
+           cmd.append(data[0]);
+           cmd.append(data[1]);
+
+           qDebug() << "Received unknown CMD# " << cmd.toHex();
+           qDebug() << "Data " << data.toHex();
            break;
        }
    }

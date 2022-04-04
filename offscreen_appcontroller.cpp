@@ -46,10 +46,9 @@ void OffscreenAppController::createApplication()
     }
     mCurrentApp->setWidth(mSize.width());
     mCurrentApp->setHeight(mSize.height());
-    emit appReady();
     mActive = true;
     setMode(AppMode::QML_APP);
-    emit modeChanged(mMode);
+    emit appReady();
     renderNext();
 }
 
@@ -70,6 +69,7 @@ void OffscreenAppController::createContainer()
                 emit qmlFailed(mContainerComponent->errorString());
                 mContainerComponent->deleteLater();
                 mContainerComponent = nullptr;
+                // handleContainerError();
             }else {
                 connect(mContainerComponent, &QQmlComponent::statusChanged, this, &OffscreenAppController::containerComponentReady);
             }
@@ -122,38 +122,37 @@ QString OffscreenAppController::getLocalFolderPath(QString path)
     return out_str;
 }
 
+void OffscreenAppController::handleComponentErrors()
+{
+    auto errors = mCurrentComponent->errors();
+    for(const auto& error: qAsConst(errors)){
+        qDebug() << error;
+    }
+    qDebug() << "Component failed" << mCurrentComponent->errorString();
+    emit qmlFailed(mCurrentComponent->errorString());
+    delete mCurrentComponent;
+    mCurrentComponent = nullptr;
+    resetAppEngine();
+}
+
+void OffscreenAppController::initializeOffScreenWindow()
+{
+    releaseApplication();
+    resetAppEngine();
+}
+
 void OffscreenAppController::loadImage(QString file_path)
 {
     mDelayTimer->stop();
+    mActive = false;
+    mLoadedPath = file_path;
+    emit loadedPathChanged(mLoadedPath);
     if(file_path.endsWith(".gif")){
-        mLoadedPath = file_path;
-        emit loadedPathChanged(mLoadedPath);
-        mActive = true;
         setMode(AppMode::GIF_MODE);
-        emit modeChanged(mMode);
-        return;
-    }
-#ifdef Q_OS_WIN
-    file_path = file_path.replace("file:///","");
-#else
-    file_path = file_path.replace("file://","");
-#endif
-    QImage image;
-    if(image.load(file_path)){
-        mLoadedPath = file_path;
-        // enforce size
-        if(image.width() != 320 || image.height() != 320){
-            image = image.scaled(320,320);
-        }
-        QVariant rot{mController->property("rotationOffset")};
-        if(rot.isValid()) {
-            QTransform rotation;
-            rotation.rotate(-1*rot.toInt()); // rotate to software defined display rotation
-            image = image.transformed(rotation);
-        }
+    } else {
         setMode(AppMode::STATIC_IMAGE);
-        emit frameReady(image);
     }
+    renderNext();
 }
 
 void OffscreenAppController::userComponentReady()
@@ -172,11 +171,7 @@ void OffscreenAppController::userComponentReady()
         }
         createApplication();
     }else {
-        qDebug() << "Component failed" << mCurrentComponent->errorString();
-        emit qmlFailed(mCurrentComponent->errorString());
-
-        delete mCurrentComponent;
-        mCurrentComponent = nullptr;
+        handleComponentErrors();
     }
 }
 
@@ -225,22 +220,6 @@ void OffscreenAppController::reconfigureSurfaceFormat()
         mOffscreenWindow->reportContentOrientationChange(Qt::LandscapeOrientation);
     }
 
-    if(!mAppEngine) {
-        mAppEngine = new QQmlApplicationEngine;
-        auto screen = mOffscreenWindow->screen();
-        if(screen) {
-            mAppEngine->rootContext()->setContextProperty("KrakenScreen", screen);
-        }
-        if(mPrimaryScreen){
-            mAppEngine->rootContext()->setContextProperty("PrimaryScreen", mPrimaryScreen);
-        }
-        mAppEngine->rootContext()->setContextProperty("AppController", this);
-        mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
-
-        if(!mAppEngine->incubationController()) {
-            mAppEngine->setIncubationController(mOffscreenWindow->incubationController());
-        }
-    }
     mGLContext->makeCurrent(mOffscreenSurface);
     mRenderControl->initialize(mGLContext);
 
@@ -248,9 +227,58 @@ void OffscreenAppController::reconfigureSurfaceFormat()
         mFBO = new QOpenGLFramebufferObject(mSize * mDPR, QOpenGLFramebufferObject::CombinedDepthStencil);
         mOffscreenWindow->setRenderTarget(mFBO);
     }
-
-    createContainer();
     mActive = true;
+}
+
+void OffscreenAppController::releaseApplication(bool deleteComponent)
+{
+    if(mCurrentApp) {
+        mCurrentApp->setVisible(false);
+        mCurrentApp->setParentItem(nullptr);
+        delete mCurrentApp;
+        mCurrentApp =  nullptr;
+        if(deleteComponent){
+            delete mCurrentComponent;
+            mCurrentComponent = nullptr;
+        }
+        mAppEngine->collectGarbage();
+    }
+}
+
+void OffscreenAppController::renderNext()
+{
+    mRenderControl->polishItems();
+    mRenderControl->sync();
+    mRenderControl->render();
+    mGLContext->functions()->glFlush();
+    ++mFPS;
+    emit frameReady(mFBO->toImage());
+    QEvent *updateRequest = new QEvent(QEvent::UpdateRequest);
+    QCoreApplication::postEvent(this, updateRequest);
+}
+
+void OffscreenAppController::resetAppEngine()
+{
+    if(mAppEngine) {
+        mAppEngine->clearComponentCache();
+        mAppEngine->collectGarbage();
+        delete mAppEngine;
+    }
+    mAppEngine = new QQmlApplicationEngine;
+    auto screen = mOffscreenWindow->screen();
+    if(screen) {
+        mAppEngine->rootContext()->setContextProperty("KrakenScreen", screen);
+    }
+    if(mPrimaryScreen){
+        mAppEngine->rootContext()->setContextProperty("PrimaryScreen", mPrimaryScreen);
+    }
+    mAppEngine->rootContext()->setContextProperty("AppController", this);
+    mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
+
+    if(!mAppEngine->incubationController()) {
+        mAppEngine->setIncubationController(mOffscreenWindow->incubationController());
+    }
+    createContainer();
 }
 
 void OffscreenAppController::setAnimationPlaying(bool playing)
@@ -273,6 +301,9 @@ void OffscreenAppController::setMode(AppMode mode)
 {
     if(mode != mMode) {
         mMode = mode;
+        if(mMode != AppMode::QML_APP) {
+            releaseApplication();
+        }
         emit modeChanged(mode);
     }
 }
@@ -311,65 +342,39 @@ void OffscreenAppController::setAlphaSize(int alpha_size)
 }
 
 
-void OffscreenAppController::setOrientation(Qt::ScreenOrientation orientation)
+void OffscreenAppController::setOrientation(Qt::ScreenOrientation orientation, bool updateController)
 {
     if(mOrientation != orientation) {
         mOrientation = orientation;
-        emit orientationChanged(orientation);
-        if(mMode == AppMode::STATIC_IMAGE) {
-            QImage image;
-            if(image.load(mLoadedPath)){
-                // enforce size
-                if(image.width() != 320 || image.height() != 320){
-                    image = image.scaled(320,320);
-                }
-                QVariant rot{mController->property("rotationOffset")};
-                if(rot.isValid()) {
-                    QTransform rotation;
-                    rotation.rotate(-1*rot.toInt()); // rotate to software defined display rotation
-                    image = image.transformed(rotation);
-                }
-                setMode(AppMode::STATIC_IMAGE);
-                emit frameReady(image);
-            }
+        if(updateController) {
+            emit orientationChanged(orientation);
         }
     }
 }
 
 void OffscreenAppController::setOrientationFromAngle(int angle)
 {
-    switch(angle){
-        case 90:
-            setOrientation(Qt::PortraitOrientation);
-            break;
-        case 180:
-            setOrientation(Qt::InvertedLandscapeOrientation);
-            break;
-        case 270:
-            setOrientation(Qt::InvertedPortraitOrientation);
-            break;
-        case 0:
-        default: setOrientation(Qt::LandscapeOrientation);
+    mController->setProperty("rotationOffset", angle);
+    if(angle >= 90 && angle < 180) {
+            setOrientation(Qt::PortraitOrientation, false);
+    } else if(angle >= 180 && angle < 270 ) {
+            setOrientation(Qt::InvertedLandscapeOrientation, false);
+    } else if( angle >= 270) {
+            setOrientation(Qt::InvertedPortraitOrientation, false);
+    } else {
+        setOrientation(Qt::LandscapeOrientation, false);
     }
-}
-
-void OffscreenAppController::renderNext()
-{
-    mRenderControl->polishItems();
-    mRenderControl->sync();
-    mRenderControl->render();
-    mGLContext->functions()->glFlush();
-    ++mFPS;
-    emit frameReady(mFBO->toImage());
-    QEvent *updateRequest = new QEvent(QEvent::UpdateRequest);
-    QCoreApplication::postEvent(this, updateRequest);
+    if(mMode != QML_APP) {
+        renderNext();
+    }
 }
 
 bool OffscreenAppController::event(QEvent *event)
 {
     if(event->type() == QEvent::UpdateRequest)
     {
-        if(mMode == AppMode::QML_APP) {
+        if(mActive) {
+            emit draw();
             mDelayTimer->start();
         }
         event->accept();
@@ -431,42 +436,20 @@ void OffscreenAppController::setFrameDelay(int frame_delay)
 bool OffscreenAppController::loadQmlFile(QString path)
 {
     bool loaded(false);
-    if(mCurrentApp){
-        mCurrentApp->setVisible(false);
-        mCurrentApp->setParentItem(nullptr);
-        delete mCurrentApp;
-        delete mCurrentComponent;
-        mCurrentApp =  nullptr;
-        mCurrentComponent = nullptr;
-        mAppEngine->collectGarbage();
-        mAppEngine->trimComponentCache();
-    }
-
+    releaseApplication();
+    mAppEngine->clearComponentCache();
     mCurrentComponent = new QQmlComponent(mAppEngine, QUrl(path));
     if(mCurrentComponent->isReady()){
         mCurrentApp = qobject_cast<QQuickItem*>(mCurrentComponent->create());
-        auto errors = mCurrentComponent->errors();
-        if(mCurrentComponent->errors().size()){
-            for(const auto& error: qAsConst(errors)){
-                qDebug() << error;
-            }
-            emit qmlFailed(mCurrentComponent->errorString());
-            delete mCurrentComponent;
-            mCurrentComponent = nullptr;
+        if(!mCurrentApp || mCurrentComponent->isError()){
+            handleComponentErrors();
             return false;
         }
         createApplication();
         loaded = true;
     }else {
-        auto errors = mCurrentComponent->errors();
-        if(mCurrentComponent->errors().size()){
-            for(const auto& error: qAsConst(errors)){
-                qDebug() << error;
-            }
-            qDebug() << "Component failed" << mCurrentComponent->errorString();
-            emit qmlFailed(mCurrentComponent->errorString());
-            delete mCurrentComponent;
-            mCurrentComponent = nullptr;
+        if(mCurrentComponent->isError()){
+            handleComponentErrors();
         }else {
             connect(mCurrentComponent, &QQmlComponent::statusChanged, this, &OffscreenAppController::userComponentReady);
         }

@@ -300,8 +300,9 @@ Rectangle{
         MouseArea{
             anchors.fill: parent
             onClicked: {
-                configureTop.configured()
+                KrakenZDriver.sendStatusRequest();
                 AppController.setOrientationFromAngle(krakenWhiteRing.rotation)
+                configureTop.configured()
                 KrakenZDriver.setBrightness(configureTop.brightness)
             }
         }

@@ -1,4 +1,4 @@
-QT += widgets quick multimedia
+QT += widgets quick multimedia webengine
 
 CONFIG += c++17
 
@@ -39,14 +39,7 @@ HEADERS += \
 
 DISTFILES += \
     examples/Clock/Clock.qml \
-    examples/Clock/center.png \
-    examples/Clock/clock-night.png \
-    examples/Clock/hour.png \
-    examples/Clock/minute.png \
-    examples/Clock/second.png \
-    examples/Krakify/Fly MP3 license.txt \
-    examples/Krakify/Fly.gif \
-    examples/Krakify/Fly.mp3 \
+    examples/KZP_Clock/kzp_clock.qml \
     examples/Krakify/Krakify.qml \
-    examples/Krakify/headphones.png \
-    examples/Monitor/Monitor.qml
+    examples/LCARS_Clock/LCARS_Clock.qml \
+    examples/Monitor/Monitor.qml \

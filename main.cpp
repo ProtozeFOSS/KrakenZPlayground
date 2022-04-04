@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
 #endif
     // Get Settings location
     // One Version is the application another is the runner
-
     qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");

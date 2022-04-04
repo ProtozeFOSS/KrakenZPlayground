@@ -31,7 +31,7 @@ class KrakenZDriver : public QObject
     Q_PROPERTY( quint8 fanDuty READ fanDuty WRITE setFanDuty NOTIFY fanDutyChanged MEMBER mFanDuty)
     Q_PROPERTY( QString version READ version NOTIFY versionChanged MEMBER mVersion)
     Q_PROPERTY( QString fwInfo READ fwInfo NOTIFY fwInfoChanged MEMBER mFwInfo)
-    Q_PROPERTY( int rotationOffset READ rotationOffset NOTIFY rotationOffsetChanged MEMBER mRotationOffset)
+    Q_PROPERTY( int rotationOffset READ rotationOffset WRITE setRotationOffset NOTIFY rotationOffsetChanged MEMBER mRotationOffset)
     Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged MEMBER mFPS)
     Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged MEMBER mBrightness)
     Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged MEMBER mImageIndex)
@@ -55,7 +55,8 @@ public:
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
-        FW_VERSION = 0x10,
+        FW_INFO = 0x10,
+        FW_REQUEST = 0x1,
         RESPONSE_VERSION = 0x11,
         QUERY_BUCKET = 0x30,
         UNKNOWN_SUB = 0x04, // mode?
@@ -68,6 +69,19 @@ public:
         WRITE_START = 0x1,
         WRITE_FINISH = 0x2,
         BRIGHTNESS = 0x2,
+        UNKNOWN_MSG_1 = 0x20,
+        UNKNOWN_MSG_1SUB1 = 0x03,
+        UNKNOWN_RSP_1 = 0x21,
+        UNKNOWN_RSP_1SUB1 = 0x03,
+        UNKNOWN_MSG_2 = 0x70,
+        UNKNOWN_MSG_2SUB1 = 0x01,
+        UNKNOWN_RSP_2 = 0x71,
+        UNKNOWN_RSP_2SUB1 = 0x01,
+        UNKNOWN_MSG_3 = 0x2a,
+        UNKNOWN_MSG_3SUB1 = 0x04,
+        CONFIRM_RESPONSE = 0xff,
+        CONFIRM_SUCCESS = 0x01,
+        CONFIRM_FAIL = 0x02,
         RESPONSE_WRITE = 0x37,
         RESPONSE_WRITE_START = 0x1,
         RESPONSE_WRITE_FINISH = 0x2,
@@ -125,6 +139,7 @@ public slots:
     void setFanDuty(quint8 duty);
     void setPumpDuty(quint8 duty); // flat
     void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true);
+    void setRotationOffset(int offset);
     void sendStatusRequest();
     void sendHex(QString hex_data, bool pad = true);
     void moveToBucket( int bucket = 0);
@@ -133,6 +148,7 @@ public slots:
     void setScreenOrientation(Qt::ScreenOrientation orientation);
     void blankScreen();
     void setMonitorFPS(bool monitor = true);
+    void sendFWRequest();
 
 protected slots:
     void receivedControlResponse();
@@ -144,7 +160,6 @@ protected:
     void parseDeleteBucket(QByteArray& data);
 
     // Control messages
-    void sendFWRequest();
     void sendBrightness(quint8 brightness);
     void sendFanDuty(quint8 duty);
     void sendPumpDuty(quint8 duty);

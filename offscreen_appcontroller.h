@@ -89,6 +89,7 @@ signals:
     void frameDelayChanged(int frame_delay);
     void screenSizeChanged(QSize size);
     void fpsChanged(int fps);
+    void draw();
     void frameReady(QImage frame);
     void orientationChanged(Qt::ScreenOrientation orientation);
     void modeChanged(OffscreenAppController::AppMode mode);
@@ -97,10 +98,11 @@ signals:
     void loadedPathChanged(QString path);
 
 public slots:
+    void initializeOffScreenWindow();
     void setBuiltIn();
     void setFrameDelay(int frame_delay);
     void setScreenSize(QSize screen_size);
-    void setOrientation(Qt::ScreenOrientation orientation);
+    void setOrientation(Qt::ScreenOrientation orientation, bool updateController = true);
     void setDrawFPS(bool draw_fps);
     void loadImage(QString file_path);
     void setAnimationPlaying(bool playing = true);
@@ -152,6 +154,9 @@ protected:
     void adjustAnimationDriver();
     void createApplication();
     void createContainer();
+    void handleComponentErrors();
+    void releaseApplication(bool deleteComponent = false);
+    void resetAppEngine();
     void setMode(AppMode mode);
     void reconfigureSurfaceFormat();
 };
