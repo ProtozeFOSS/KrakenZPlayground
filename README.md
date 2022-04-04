@@ -1,11 +1,13 @@
-# Kraken Z Playground
+# Kraken Z Playground 1.0 Released!
+Now with improved Clock example
+![KZP v1 0](https://user-images.githubusercontent.com/2994631/161541282-5c88b28d-9776-494f-aafc-01e8075d39bb.gif)
 Fun interaction and play with NZXT Kraken Z AIOs and the Qml language. The application connects and communicates with the Kraken Z series AIO through USB. 
 Through the application the user can change pump speeds, fan speeds and brightness. Orientation for the Kraken Z series is handled in software. 
 
 <img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="400"/>
 
 # Latest Release
-[Download and try 1.bV2](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.bV2)  *now with background rendering goodness!*
+[1.0 Download and try](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.0-final)  *now with background rendering goodness!*
 
 # Discussion for App development and bugs
 Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/mCGx8FZP3M)
