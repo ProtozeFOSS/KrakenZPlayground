@@ -1,4 +1,4 @@
-QT += widgets quick multimedia webengine
+QT += widgets quick multimedia
 
 CONFIG += c++17
 
