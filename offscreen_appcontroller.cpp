@@ -215,6 +215,7 @@ void OffscreenAppController::reconfigureSurfaceFormat()
 
     if(!mOffscreenWindow) {
         mOffscreenWindow = new QQuickWindow(mRenderControl);
+        mOffscreenWindow->setFlags(Qt::FramelessWindowHint);
         mOffscreenWindow->setGeometry(0, 0, mSize.width(), mSize.height());
         mContainer = mOffscreenWindow->contentItem();
         mOffscreenWindow->reportContentOrientationChange(Qt::LandscapeOrientation);

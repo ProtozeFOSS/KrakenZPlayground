@@ -8,9 +8,7 @@ import QtGraphicalEffects 1.15
 Rectangle {
     id: krakenRoot
     color: "#2a2e31"
-    property bool drawFPS: false
-    property bool showFPS: true
-    property int  mode:0 // 0 for nothing, 1 for image, 2 for Monitor Mode , 3 for qml, 4 for animated image (gif)
+    property bool showFPS: false
     property string selectedPath:""
     Text{
         id: deviceName
@@ -296,7 +294,7 @@ Rectangle {
             visible:errorTitle.visible
         }
         Rectangle{
-            visible: KrakenZDriver.monitorFPS
+            visible: krakenRoot.showFPS && (AppController.mode > AppMode.STATIC_IMAGE)
             anchors.bottom:parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
             height: 28
@@ -385,7 +383,7 @@ Rectangle {
         anchors.topMargin: 8
         radius:6
         border.color: "#004d4d4d"
-        height:206
+        height:AppController.mode > AppMode.GIF_MODE ?  206:138
         anchors.left: krakenPreview.left
         anchors.right: krakenPreview.right
         Text{
@@ -438,20 +436,20 @@ Rectangle {
                 radius:4
                 height:32
                 width:parent.width - 8
-                color:KrakenZDriver.monitorFPS ? "red" : "#cc03d429"
+                color:krakenRoot.showFPS ? "red" : "#cc03d429"
                 anchors.horizontalCenter: parent.horizontalCenter
                 Text{
                     anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    text:KrakenZDriver.monitorFPS ? "Stop Tracking FPS" : "Track FPS";
+                    text:krakenRoot.showFPS ? "Hide FPS" : "Show FPS";
                     color:"white"
                 }
                 MouseArea{
                     anchors.fill: parent
                     onClicked:{
-                        KrakenZDriver.monitorFPS = !KrakenZDriver.monitorFPS;
-                        if(!KrakenZDriver.monitorFPS) {
+                        krakenRoot.showFPS = !krakenRoot.showFPS;
+                        if(!krakenRoot.showFPS) {
                             AppController.drawFPS = false;
                         } else {
                             AppController.drawFPS = drawCheck.checked;
@@ -462,16 +460,26 @@ Rectangle {
             Rectangle{
                 border.color: "black"
                 radius:4
-                visible: KrakenZDriver.monitorFPS
-                height:42
+                visible: krakenRoot.showFPS
+                height:32
                 width:parent.width - 8
                 color:AppController.drawFPS ? "red" : "#cc03d429"
                 anchors.horizontalCenter: parent.horizontalCenter
                 CheckBox{
                     id: drawCheck
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: -48
+                    indicator.width: 24
+                    indicator.height: 24
                     checked: AppController.drawFPS
-                    text: "Draw FPS on LCD";
+                    contentItem:Text{
+                        leftPadding: 116
+                        text: "Draw FPS on LCD";
+                        color:"white"
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    spacing:4
                     onCheckedChanged: {
                         AppController.drawFPS = checked;
                     }
@@ -481,6 +489,7 @@ Rectangle {
                 height:48
                 width:parent.width-8
                 color:"transparent"
+                visible: AppController.mode > AppMode.GIF_MODE
                 Text{
                     id: lowDelay
                     color:"white"
@@ -1256,64 +1265,22 @@ Rectangle {
             errorTitle.visible = true;
         }
     }
-
-    Item{
-        id:userApp
-        height:320
-        width:320
-        y:800
-        Item{
-            id:userAppContainer
-            anchors.fill: parent
+    Timer{
+        id: imageSetTimer
+        property string imageSource: ""
+        interval:100
+        repeat: false
+        running: false
+        onTriggered: {
+            AppController.loadImage(imageSource);
         }
-
-        Rectangle{
-            visible:krakenRoot.drawFPS
-            anchors.bottom:parent.bottom
-            anchors.horizontalCenter: parent.horizontalCenter
-            height: 28
-            color: "#120084"
-            width: 110
-            radius:6
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.00;
-                    color: "#0000ff";
-                }
-                GradientStop {
-                    position: 0.95;
-                    color: "#161949";
-                }
-            }
-            Text{
-                anchors.fill: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 18
-                style: Text.Sunken
-                styleColor: "#01767a"
-                color:"white"
-                text: "FPS: " + KrakenZDriver.fps.toString().slice(0,5)
-                font.family: "Comic Sans MS"
-            }
-        }
-        Timer{
-            id: imageSetTimer
-            property string imageSource: ""
-            interval:100
-            repeat: false
-            running: false
-            onTriggered: {
-                AppController.loadImage(imageSource);
-            }
-        }
-        Component.onCompleted: {
-            SystemTray.preventCloseAppWithWindow();
-            AppController.initializeOffScreenWindow();
-            KrakenZDriver.setBuiltIn(1);
-            imageSetTimer.imageSource = "qrc:/images/Peyton.png";
-            krakenRoot.mode = 1;
-            imageSetTimer.start();
-        }
+    }
+    Component.onCompleted: {
+        SystemTray.preventCloseAppWithWindow();
+        AppController.initializeOffScreenWindow();
+        KrakenZDriver.setBuiltIn(1);
+        KrakenZDriver.setMonitorFPS();
+        imageSetTimer.imageSource = "qrc:/images/Peyton.png";
+        imageSetTimer.start();
     }
 }
