@@ -1266,6 +1266,7 @@ Rectangle {
         }
     }
     Component.onCompleted:{
+        SystemTray.preventCloseAppWithWindow();
         SettingsManager.applyStartupProfile();
     }
 }

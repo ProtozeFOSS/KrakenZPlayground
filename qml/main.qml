@@ -97,8 +97,7 @@ Window {
             active:false
             anchors.fill: parent
             sourceComponent: KrakenZConfigure {
-                onConfigured:{                    
-                    SystemTray.preventCloseAppWithWindow();
+                onConfigured:{
                     KrakenZDriver.setBuiltIn(1);
                     KrakenZDriver.setMonitorFPS();
                     imageSetTimer.imageSource = "qrc:/images/Peyton.png";
