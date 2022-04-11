@@ -8,6 +8,8 @@
 #include <QSharedPointer>
 #include <QTimer>
 #include "qusbendpoint.h"
+#include <QJsonObject>
+
 class QQuickItemGrabResult;
 
 class QUsbDevice;
@@ -52,6 +54,7 @@ public:
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
     bool monitorFPS() { return mMeasure.isActive(); }
+    QJsonObject toJsonProfile();
     ~KrakenZDriver();
     enum WriteTarget{
         NO_TARGET = 0x00,
@@ -132,6 +135,7 @@ signals:
     void monitorFPSChanged(bool monitor);
 
 public slots:
+    void blankScreen();
     void initialize();
     void startMonitoringFramerate();
     void stopMonitoringFramerate();
@@ -139,6 +143,7 @@ public slots:
     void setFanDuty(quint8 duty);
     void setPumpDuty(quint8 duty); // flat
     void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true);
+    void setJsonProfile(QJsonObject profile);
     void setRotationOffset(int offset);
     void sendStatusRequest();
     void sendHex(QString hex_data, bool pad = true);
@@ -146,7 +151,6 @@ public slots:
     void setNZXTMonitor();
     void setBuiltIn(quint8 index);
     void setScreenOrientation(Qt::ScreenOrientation orientation);
-    void blankScreen();
     void setMonitorFPS(bool monitor = true);
     void sendFWRequest();
 

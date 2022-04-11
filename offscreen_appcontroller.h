@@ -5,10 +5,12 @@
 #include <QSize>
 #include <QString>
 #include <QDir>
-#include <QFuture>
 #include <QQmlComponent>
 #include <QImage>
 #include <QScreen>
+#include <QJsonObject>
+#include <QAnimationDriver>
+
 class QQuickItem;
 class QTimer;
 class QOpenGLContext;
@@ -17,7 +19,6 @@ class QOffscreenSurface;
 class QQuickRenderControl;
 class QQuickWindow;
 class QQmlApplicationEngine;
-#include <QAnimationDriver>
 class AnimationDriver : public QAnimationDriver
 {
 public:
@@ -55,8 +56,9 @@ public:
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
     AppMode mode() {return mMode; }
+    Q_INVOKABLE void loadImage(QString file_path);
     Q_INVOKABLE bool loadQmlFile(QString path);
-    void  initialize();
+    Q_INVOKABLE QJsonObject toJsonProfile();
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
     QSize screenSize() { return mSize; }
@@ -98,13 +100,14 @@ signals:
     void loadedPathChanged(QString path);
 
 public slots:
+    void initialize();
     void initializeOffScreenWindow();
-    void setBuiltIn();
+    void setBuiltIn(bool loadingGif);
     void setFrameDelay(int frame_delay);
     void setScreenSize(QSize screen_size);
     void setOrientation(Qt::ScreenOrientation orientation, bool updateController = true);
     void setDrawFPS(bool draw_fps);
-    void loadImage(QString file_path);
+    void setJsonProfile(QJsonObject profile);
     void setAnimationPlaying(bool playing = true);
 
 protected slots:

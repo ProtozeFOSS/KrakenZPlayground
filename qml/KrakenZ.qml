@@ -889,7 +889,6 @@ Rectangle {
                     lens.opacity = (50 - value)/100;
                 }
             }
-
             KrakenZDriver.setBrightness(value);
         }
 
@@ -1126,7 +1125,7 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    AppController.setBuiltIn();
+                    AppController.setBuiltIn(false);
                     KrakenZDriver.setNZXTMonitor();
                 }
             }
@@ -1167,7 +1166,7 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    AppController.setBuiltIn();
+                    AppController.setBuiltIn(true);
                     KrakenZDriver.setBuiltIn(1);
                 }
             }
@@ -1187,7 +1186,7 @@ Rectangle {
             MouseArea{
                 anchors.fill: parent
                 onClicked: {
-                    KrakenZDriver.setBrightness(0);
+                    setBrightnessSlider.value = 0;
                 }
             }
         }
@@ -1246,7 +1245,7 @@ Rectangle {
         id:statusPoll
         interval:900
         repeat: true
-        running: true
+        running: false
         onTriggered: {
             KrakenZDriver.sendStatusRequest();
         }
@@ -1258,6 +1257,7 @@ Rectangle {
         }
         function onModeChanged(mode) {
             errorTitle.reset();
+            statusPoll.start();
         }
 
         function onQmlFailed(error) {
@@ -1265,22 +1265,7 @@ Rectangle {
             errorTitle.visible = true;
         }
     }
-    Timer{
-        id: imageSetTimer
-        property string imageSource: ""
-        interval:100
-        repeat: false
-        running: false
-        onTriggered: {
-            AppController.loadImage(imageSource);
-        }
-    }
-    Component.onCompleted: {
-        SystemTray.preventCloseAppWithWindow();
-        AppController.initializeOffScreenWindow();
-        KrakenZDriver.setBuiltIn(1);
-        KrakenZDriver.setMonitorFPS();
-        imageSetTimer.imageSource = "qrc:/images/Peyton.png";
-        imageSetTimer.start();
+    Component.onCompleted:{
+        SettingsManager.applyStartupProfile();
     }
 }

@@ -5,12 +5,22 @@ Window {
     id:window
     width: 600
     height:720
-    visible: true
+    visible: false
     minimumHeight: 720
     minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
 
+    Timer{
+        id: imageSetTimer
+        property string imageSource: ""
+        interval:100
+        repeat: false
+        running: false
+        onTriggered: {
+            AppController.loadImage(imageSource);
+        }
+    }
     onVisibleChanged: {
         KrakenImageProvider.setDisplayVisible(visible);
     }
@@ -21,6 +31,7 @@ Window {
         property string errorMesage:""
         Connections{
             target:KrakenZDriver
+            enabled: container.state == ""
             function onError(error){
                 container.errorMesage = error.MESSAGE;
                 container.state = "error";
@@ -73,7 +84,6 @@ Window {
                 PropertyChanges{target:missingDevice; active: false}
                 PropertyChanges{target:mainApplication; active: true}
             }
-
         ]
         Loader{
             id: mainApplication
@@ -87,7 +97,12 @@ Window {
             active:false
             anchors.fill: parent
             sourceComponent: KrakenZConfigure {
-                onConfigured:{
+                onConfigured:{                    
+                    SystemTray.preventCloseAppWithWindow();
+                    KrakenZDriver.setBuiltIn(1);
+                    KrakenZDriver.setMonitorFPS();
+                    imageSetTimer.imageSource = "qrc:/images/Peyton.png";
+                    imageSetTimer.start();
                     container.state = "application"
                 }
             }
@@ -118,15 +133,26 @@ Window {
             sourceComponent:UserWarning{
                 onAccepted:{
                     if(KrakenZDriver.found){
+                        AppController.initialize();
                         KrakenZDriver.initialize();
+                        SettingsManager.createDefaultSettings();
                     }else {
                         container.state = "missing";
                     }
                 }
+                Component.onCompleted: {
+                    if(SettingsManager.acceptedAgreement) {
+                        AppController.initialize();
+                        KrakenZDriver.initialize();
+                        container.state = "application"
+                    } else {
+                        window.visible = true;
+                    }
+                }
             }
         }
-    }
 
+    }
     Component.onCompleted: {
         SystemTray.setVisible();
     }

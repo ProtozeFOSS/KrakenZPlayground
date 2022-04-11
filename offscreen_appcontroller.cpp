@@ -17,11 +17,12 @@
 #include <QTimer>
 #include <QQuickItem>
 #include <QString>
+#include "krakenzdriver.h"
 
 OffscreenAppController::OffscreenAppController(QObject *controller, QObject *parent)
     : QObject(parent), mController(controller), mContainer(nullptr), mCurrentApp(nullptr), mCurrentComponent(nullptr), mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
-    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(true),
+    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
     mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE), mDrawFPS(false), mPlaying(false)
 {
@@ -83,6 +84,8 @@ void OffscreenAppController::initialize()
         mInitialized = true;
         reconfigureSurfaceFormat();
         adjustAnimationDriver();
+        initializeOffScreenWindow();
+        createContainer();
     }
 }
 
@@ -228,7 +231,6 @@ void OffscreenAppController::reconfigureSurfaceFormat()
         mFBO = new QOpenGLFramebufferObject(mSize * mDPR, QOpenGLFramebufferObject::CombinedDepthStencil);
         mOffscreenWindow->setRenderTarget(mFBO);
     }
-    mActive = true;
 }
 
 void OffscreenAppController::releaseApplication(bool deleteComponent)
@@ -327,8 +329,9 @@ void OffscreenAppController::setScreenSize(QSize screen_size)
     }
 }
 
-void OffscreenAppController::setBuiltIn()
+void OffscreenAppController::setBuiltIn(bool loadingGif)
 {
+    mLoadedPath = loadingGif ?  "1":"2";
     mDelayTimer->stop();
     setMode(AppMode::BUILT_IN);
     mActive = false;
@@ -365,7 +368,7 @@ void OffscreenAppController::setOrientationFromAngle(int angle)
     } else {
         setOrientation(Qt::LandscapeOrientation, false);
     }
-    if(mMode != QML_APP) {
+    if(mMode == QML_APP) {
         renderNext();
     }
 }
@@ -434,11 +437,67 @@ void OffscreenAppController::setFrameDelay(int frame_delay)
     }
 }
 
+void OffscreenAppController::setJsonProfile(QJsonObject profile)
+{
+    auto loadedPath = profile.value("loadedPath").toString();
+    int mode = profile.value("mode").toInt(-2);
+    switch(mode){
+        case AppMode::BUILT_IN:{
+            bool ok{false};
+            auto type = loadedPath.toInt(&ok);
+            auto controller = qobject_cast<KrakenZDriver*>(mController);
+            if(controller){
+                if(ok) {
+                    if(type ==  1) {
+                        controller->setBuiltIn(1);
+                        setBuiltIn(true);
+                    }else {
+                        controller->setNZXTMonitor();
+                        setBuiltIn(false);
+                    }
+                }
+            }
+            break;
+        }
+        case AppMode::STATIC_IMAGE:
+        case AppMode::GIF_MODE: {
+            loadImage(loadedPath);
+            break;
+        }
+        case AppMode::QML_APP: {
+            loadQmlFile(loadedPath);
+            break;
+        }
+
+        default:;
+    }
+    int frameDelay = profile.value("frameDelay").toInt(-2);
+    if(frameDelay) {
+        setFrameDelay(frameDelay);
+    }
+}
+
+QJsonObject OffscreenAppController::toJsonProfile()
+{
+    QJsonObject profile;
+    profile.insert("mode", mMode);
+    profile.insert("loadedPath", mLoadedPath);
+    switch(mMode) {
+        case QML_APP:{
+            profile.insert("frameDelay", mFrameDelay);
+            break;
+        }
+        default:;
+    }
+    return profile;
+}
+
 bool OffscreenAppController::loadQmlFile(QString path)
 {
     bool loaded(false);
     releaseApplication();
     mAppEngine->clearComponentCache();
+    mLoadedPath = path;
     mCurrentComponent = new QQmlComponent(mAppEngine, QUrl(path));
     if(mCurrentComponent->isReady()){
         mCurrentApp = qobject_cast<QQuickItem*>(mCurrentComponent->create());
@@ -462,9 +521,11 @@ bool OffscreenAppController::loadQmlFile(QString path)
 OffscreenAppController::~OffscreenAppController()
 {
     mDelayTimer->stop();
-    mAppEngine->load(":/clear");
-    mAppEngine->clearComponentCache();
-    mAppEngine->collectGarbage();
+    if(mAppEngine) {
+        mAppEngine->load(":/clear");
+        mAppEngine->clearComponentCache();
+        mAppEngine->collectGarbage();
+    }
     delete mDelayTimer;
     delete mCurrentApp;
     delete mContainer;

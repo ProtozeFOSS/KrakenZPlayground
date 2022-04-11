@@ -13,6 +13,7 @@ SOURCES += \
         krakenimageprovider.cpp \
         krakenzdriver.cpp \
         main.cpp \
+        settingsmanager.cpp \
         systemtray.cpp
 
 RESOURCES += qml.qrc \
@@ -35,6 +36,7 @@ HEADERS += \
     offscreen_appcontroller.h \
     krakenimageprovider.h \
     krakenzdriver.h \
+    settingsmanager.h \
     systemtray.h
 
 DISTFILES += \

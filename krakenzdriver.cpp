@@ -310,6 +310,31 @@ void KrakenZDriver::setFanDuty(quint8 duty)
 }
 
 
+void KrakenZDriver::setJsonProfile(QJsonObject profile)
+{
+    int fanDuty = profile.value("fanDuty").toInt(-1);
+    if(fanDuty >= 0 ) {
+        setFanDuty(fanDuty);
+        mFanDuty = fanDuty;
+        emit fanDutyChanged(mFanDuty);
+    }
+    int pumpDuty = profile.value("pumpDuty").toInt(-1);
+    if(pumpDuty) {
+        setPumpDuty(pumpDuty);
+        mPumpDuty = pumpDuty;
+        emit pumpDutyChanged(mFanDuty);
+    }
+    //set the values
+    int rotationOffset = profile.value("rotationOffset").toInt(-1);
+    if(rotationOffset >= 0 ) {
+        setRotationOffset(rotationOffset);
+    }
+    int brightness = profile.value("brightness").toInt(-1);
+    if(brightness >= 0 ) {
+        setBrightness(brightness);
+    }
+}
+
 void KrakenZDriver::setPumpDuty(quint8 duty)
 {
     if(duty >= 20 && duty <= 100){
@@ -593,6 +618,16 @@ void KrakenZDriver::setRotationOffset(int offset)
         mRotationOffset = offset;
         emit rotationOffsetChanged(offset);
     }
+}
+
+QJsonObject KrakenZDriver::toJsonProfile()
+{
+    QJsonObject out;
+    out.insert("pumpDuty", mPumpDuty);
+    out.insert("fanDuty", mFanDuty);
+    out.insert("rotationOffset", mRotationOffset);
+    out.insert("brightness", mBrightness);
+    return out;
 }
 
 void KrakenZDriver::receivedControlResponse()

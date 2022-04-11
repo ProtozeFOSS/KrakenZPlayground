@@ -9,19 +9,18 @@
 #include "systemtray.h"
 #include <QProcess>
 #include <iostream>
-
+#include "settingsmanager.h"
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
-    // Get Settings location
-    // One Version is the application another is the runner
+
     qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
-    KrakenZDriver krakenDevice(&app); // if for some reason you need different PID (z63?), pass it in here
-
+    KrakenZDriver krakenDevice(&app); // if for some reason you need different PID (driver update?), pass it in here
+    SettingsManager settingsManager(app.applicationDirPath(), &app);
     OffscreenAppController appController(&krakenDevice, &app);
     appController.setAlphaSize(8);
     appController.setBlueSize(8);
@@ -30,7 +29,6 @@ int main(int argc, char *argv[])
     appController.setRedSize(8);
     appController.setScreenSize(QSize(320,320));
     appController.setStencilSize(16);
-    appController.initialize();
     QObject::connect(&appController, &OffscreenAppController::orientationChanged,
                      &krakenDevice,  &KrakenZDriver::setScreenOrientation);
     SystemTray  systemTray(&app);
@@ -45,10 +43,12 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("AppController", &appController);
     engine.rootContext()->setContextProperty("KrakenZDriver", &krakenDevice);
     engine.rootContext()->setContextProperty("SystemTray", &systemTray);
+    engine.rootContext()->setContextProperty("SettingsManager", &settingsManager);
     engine.rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
     engine.rootContext()->setContextProperty("ApplicationPath", app.applicationDirPath());
     systemTray.setEngine(&engine);
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
+    // On created main application Qml
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [&engine, icon,&appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
         if(objUrl.toString().endsWith(QStringLiteral("clear")))
@@ -78,6 +78,18 @@ int main(int argc, char *argv[])
             }
         }
     }, Qt::QueuedConnection);
+
+    QObject::connect(&app, &QApplication::aboutToQuit, &app, [&settingsManager, &krakenDevice, &appController]{ // on Application close
+        QJsonObject profile;
+        profile.insert("krakenzdriver", krakenDevice.toJsonProfile());
+        profile.insert("appcontroller", appController.toJsonProfile());
+        settingsManager.writeSettingsOnExit(profile); // write settings out
+    });
+    QObject::connect(&settingsManager, &SettingsManager::profileChanged, &app, [&krakenDevice, &appController](int index, QJsonObject data){ // on Application close
+        Q_UNUSED(index)
+        krakenDevice.setJsonProfile(data.value("krakenzdriver").toObject());
+        appController.setJsonProfile(data.value("appcontroller").toObject());
+    });
     engine.load(url);
 
     auto ret_val{app.exec()};

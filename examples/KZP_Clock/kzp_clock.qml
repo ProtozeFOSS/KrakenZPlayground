@@ -322,14 +322,14 @@ Rectangle{
         anchors{
             verticalCenter: parent.verticalCenter
             left:parent.left
-            leftMargin:42
+            leftMargin:38
             verticalCenterOffset: 78
         }
         color:"white"
         font.family: clockFont.name
         font.letterSpacing: 0
         font.preferShaping: true
-        font.pixelSize:18
+        font.pixelSize:14
         font.kerning: true
         style:Text.Outline
         styleColor: "#000000"
