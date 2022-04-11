@@ -1,6 +1,5 @@
 #include "settingsmanager.h"
 #include <QFile>
-#include <QJsonArray>
 #include <QJsonValue>
 #include <QJsonDocument>
 #include <QDir>
@@ -28,7 +27,6 @@ void SettingsManager::addProfile(QString name)
 
 void SettingsManager::applyStartupProfile()
 {
-
     auto profileName{mProfileName.size() ? mProfileName:mSettingsObject.value("startProfile").toString()};
     if(profileName.size()) {
         // seach through the profiles and fine definition for profileName
@@ -42,6 +40,7 @@ void SettingsManager::applyStartupProfile()
             if(name.compare(profileName) == 0) { // found startup profile
                 mProfileName = name;
                 auto data = profile.value("data").toObject();
+                emit profilesLoaded();
                 emit profileChanged(index, data);
                 notFound = false;
             }
@@ -105,6 +104,30 @@ bool SettingsManager::loadSettings()
     return loaded;
 }
 
+
+QJsonArray SettingsManager::profiles()
+{
+    return mSettingsObject.value("profiles").toArray();
+}
+
+void SettingsManager::selectProfile(QString name)
+{
+    // find the profile, then set it as current
+    if(name.size()) {
+        qDebug() << "Changing profile to " << name;
+        auto profiles = mSettingsObject.value("profiles").toArray();
+        auto profileCount = profiles.size();
+        for(int index{0}; index < profileCount; ++index){
+            auto profile = profiles.at(index).toObject();
+            auto profileName = profile.value("name").toString();
+            if(profileName.compare(name) == 0) { // found startup profile
+                mProfileName = name;
+                auto data = profile.value("data").toObject();
+                emit profileChanged(index, data);
+            }
+        }
+    }
+}
 
 void SettingsManager::writeCurrentSettings()
 {

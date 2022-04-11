@@ -6,6 +6,8 @@
 #include <QSystemTrayIcon>
 #include <QQuickWindow>
 #include <QQmlApplicationEngine>
+#include <QJsonArray>
+
 class QMenu;
 class QAction;
 class SystemTray : public QObject
@@ -17,8 +19,9 @@ public:
     void setIcon(QIcon icon);
     void setEngine(QQmlApplicationEngine* engine);
     void setMainWindow(QQuickWindow* window);
+    void setJsonProfiles(QJsonArray profiles, QString current);
 signals:
-
+    void profileSelected(QString name);
 public slots:
     void preventCloseAppWithWindow();
     void setVisible(bool visible = true);
@@ -30,7 +33,9 @@ protected:
     QMenu*                 mMenu;
     QAction*               mQuitAction;
     QAction*               mAppBanner;
+    QMenu*                 mProfileMenu;
 protected slots:
+    void handleProfileSelect(bool checked);
     void showMainWindow();
 
 };

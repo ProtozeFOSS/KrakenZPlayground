@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     auto previewProvider = new KrakenImageProvider(&app);
     previewProvider->setKrakenDevice(&krakenDevice);
     QObject::connect(&appController, &OffscreenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
+    QObject::connect(&systemTray, &SystemTray::profileSelected, &settingsManager, &SettingsManager::selectProfile);
     QQmlApplicationEngine engine;
     engine.addImageProvider("krakenz", previewProvider); // will be owned by the engine
     engine.rootContext()->setContextProperty("AppController", &appController);
@@ -69,10 +70,10 @@ int main(int argc, char *argv[])
             bool errored(true);
             auto objects = engine.rootObjects();
             if(objects.size()) {
-                auto window = qobject_cast<QQuickWindow*>(objects.at(0));
+                auto window{qobject_cast<QQuickWindow*>(objects.at(0))};
                 if(window){
                     window->setIcon(icon);
-                    auto screen = window->screen();
+                    auto screen{window->screen()};
                     appController.setPrimaryScreen(screen);
                     systemTray.setMainWindow(window);
                     errored = false;
@@ -91,10 +92,14 @@ int main(int argc, char *argv[])
         profile.insert("appcontroller", appController.toJsonProfile());
         settingsManager.writeSettingsOnExit(profile); // write settings out
     });
-    QObject::connect(&settingsManager, &SettingsManager::profileChanged, &app, [&krakenDevice, &appController](int index, QJsonObject data){ // on Application close
+    QObject::connect(&settingsManager, &SettingsManager::profileChanged, &app, [&krakenDevice, &appController](int index, QJsonObject data){ // on profile changed
         Q_UNUSED(index)
         krakenDevice.setJsonProfile(data.value("krakenzdriver").toObject());
         appController.setJsonProfile(data.value("appcontroller").toObject());
+    });
+    QObject::connect(&settingsManager, &SettingsManager::profilesLoaded, &app, [&settingsManager, &systemTray](){ // on profiles loaded
+        auto profiles{settingsManager.profiles()};
+        systemTray.setJsonProfiles(profiles, settingsManager.currentProfile());
     });
     engine.load(url);
 

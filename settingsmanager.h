@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QJsonObject>
+#include <QJsonArray>
 /*****************************************************************************
  *  Settings Manager performs CRUD for profiles, and CRUR for the
  *  settings file (replace not delete)
@@ -27,14 +28,19 @@ class SettingsManager : public QObject
 public:
     explicit SettingsManager(QString directory,QString profile = QStringLiteral("Default"), QObject *parent = nullptr);
     bool agreed(){return loadSettings();}
+    QJsonArray profiles();
+    QString currentProfile() { return mProfileName;}
+
 public slots:
     void addProfile(QString name);
     void applyStartupProfile();
+    void selectProfile(QString name);
     void createDefaultSettings();
     void removeProfile(QString name);
     void writeSettingsOnExit(QJsonObject current_settings);
 
 signals:
+    void profilesLoaded();
     void profileAdded(QString name);
     void profileChanged(int index, QJsonObject data);
     void profileRemoved(QString name);
