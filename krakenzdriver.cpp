@@ -652,6 +652,8 @@ void KrakenZDriver::receivedControlResponse()
        case RESPONSE_SWITCH_BUCKET:
        case QUERY_RESPONSE:
        case CONFIRM_RESPONSE:
+       case SETUP_RESPONSE:
+       case RESPONSE_WRITE:
            break;
        default:
        {

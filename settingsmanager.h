@@ -25,7 +25,7 @@ class SettingsManager : public QObject
     Q_OBJECT
     Q_PROPERTY(bool acceptedAgreement READ agreed CONSTANT)
 public:
-    explicit SettingsManager(QString directory, QObject *parent = nullptr);
+    explicit SettingsManager(QString directory,QString profile = QStringLiteral("Default"), QObject *parent = nullptr);
     bool agreed(){return loadSettings();}
 public slots:
     void addProfile(QString name);

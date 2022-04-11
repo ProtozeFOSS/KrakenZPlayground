@@ -6,8 +6,8 @@
 #include <QDir>
 #include "krakenzdriver.h"
 
-SettingsManager::SettingsManager(QString directory, QObject *parent)
-    : QObject{parent}
+SettingsManager::SettingsManager(QString directory, QString profile, QObject *parent)
+    : QObject{parent}, mProfileName(profile)
 {
     mFilePath = directory;
     mFilePath.append(QDir::separator());
@@ -22,7 +22,8 @@ void SettingsManager::addProfile(QString name)
 
 void SettingsManager::applyStartupProfile()
 {
-    auto profileName = mSettingsObject.value("startProfile").toString();
+
+    auto profileName{mProfileName.size() ? mProfileName:mSettingsObject.value("startProfile").toString()};
     if(profileName.size()) {
         // seach through the profiles and fine definition for profileName
         qDebug() << "Setting startup profile:" << profileName;

@@ -20,7 +20,11 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
     KrakenZDriver krakenDevice(&app); // if for some reason you need different PID (driver update?), pass it in here
-    SettingsManager settingsManager(app.applicationDirPath(), &app);
+    QString profile;
+    if(argc > 1){
+        profile = argv[1];
+    }
+    SettingsManager settingsManager(app.applicationDirPath(), profile, &app);
     OffscreenAppController appController(&krakenDevice, &app);
     appController.setAlphaSize(8);
     appController.setBlueSize(8);
