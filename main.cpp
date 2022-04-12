@@ -7,7 +7,7 @@
 #include "offscreen_appcontroller.h"
 #include "qusbdevice.h"
 #include "systemtray.h"
-#include <QProcess>
+#include <QStandardPaths>
 #include <iostream>
 #include "settingsmanager.h"
 int main(int argc, char *argv[])
@@ -24,7 +24,9 @@ int main(int argc, char *argv[])
     if(argc > 1){
         profile = argv[1];
     }
-    SettingsManager settingsManager(app.applicationDirPath(), profile, &app);
+    auto settingsDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    qDebug() << "Storing settings @" << settingsDir;
+    SettingsManager settingsManager(settingsDir, profile, &app);
     OffscreenAppController appController(&krakenDevice, &app);
     appController.setAlphaSize(8);
     appController.setBlueSize(8);

@@ -427,7 +427,7 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked:{
-                        AppController.loadQmlFile(krakenRoot.selectedPath);
+                        AppController.loadQmlFile(AppController.loadedPath);
                     }
                 }
             }
@@ -1012,7 +1012,6 @@ Rectangle {
             left:parent.left
             leftMargin:18
         }
-        checked: true
         onCheckedChanged: {
             setOrientationSlider.stepSize = checked ? 90:1;
         }
@@ -1268,5 +1267,6 @@ Rectangle {
     Component.onCompleted:{
         SystemTray.preventCloseAppWithWindow();
         SettingsManager.applyStartupProfile();
+        unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
     }
 }

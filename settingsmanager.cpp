@@ -9,6 +9,12 @@
 SettingsManager::SettingsManager(QString directory, QString profile, QObject *parent)
     : QObject{parent}, mProfileName(profile)
 {
+    QDir settingsDir;
+    if(!settingsDir.exists(directory)) {
+        if(!settingsDir.mkpath(directory)) {
+            qDebug() << "Was not able to create path " << directory << " - settings will not be stored";
+        }
+    }
     mFilePath = directory;
     mFilePath.append(QDir::separator());
     mFilePath.append("settings.json");
@@ -29,6 +35,7 @@ void SettingsManager::applyStartupProfile()
         qDebug() << "Setting startup profile:" << profileName;
         auto profiles = mSettingsObject.value("profiles").toArray();
         auto profileCount = profiles.size();
+        bool notFound(true);
         for(int index{0}; index < profileCount; ++index){
             auto profile = profiles.at(index).toObject();
             auto name = profile.value("name").toString();
@@ -36,6 +43,17 @@ void SettingsManager::applyStartupProfile()
                 mProfileName = name;
                 auto data = profile.value("data").toObject();
                 emit profileChanged(index, data);
+                notFound = false;
+            }
+        }
+        if(notFound) {
+            if(mProfileName.compare("Default") != 0) {
+                qDebug() << "Profile" << mProfileName << "was not found, attempting to load Default";
+                mProfileName.clear();
+                applyStartupProfile();
+            } else { // something funky about profiles, dump them
+                qDebug() << "Error Applying profile, even the default one";
+                createDefaultSettings();
             }
         }
     }
@@ -127,4 +145,5 @@ void SettingsManager::writeSettingsOnExit(QJsonObject current_settings)
             }
         }
     }
+    qDebug() << "Updated settings file @" << mFilePath;
 }
