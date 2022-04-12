@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
                      krakenDevice,  &KrakenZDriver::setScreenOrientation);
     SystemTray  systemTray(&app);
     QPixmap iconPixmap(":/images/Droplet.png");
-    auto icon = QIcon(iconPixmap);
-    systemTray.setIcon(icon);
+    auto icon{new QIcon(iconPixmap)};
+    systemTray.setIcon(*icon);
     auto previewProvider = new KrakenImageProvider(&app);
     previewProvider->setKrakenDevice(krakenDevice);
     QObject::connect(appController, &OffscreenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
@@ -57,10 +57,7 @@ int main(int argc, char *argv[])
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     // On created main application Qml
     QObject::connect(engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [engine, icon, appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
-        if(objUrl.toString().endsWith(QStringLiteral("clear")))
-            return;
-
+                     &app, [engine, icon, appController, &systemTray, &url](QObject *obj, const QUrl &objUrl) {
         if ((!obj && url == objUrl) ) {
             std::cerr << "Failed to load main.qml\n";
             QCoreApplication::exit(-1);
@@ -72,7 +69,9 @@ int main(int argc, char *argv[])
             if(objects.size()) {
                 auto window{qobject_cast<QQuickWindow*>(objects.at(0))};
                 if(window){
-                    window->setIcon(icon);
+                    if(icon){
+                        window->setIcon(*icon);
+                    }
                     auto screen{window->screen()};
                     appController->setPrimaryScreen(screen);
                     systemTray.setMainWindow(window);
@@ -90,13 +89,13 @@ int main(int argc, char *argv[])
         krakenDevice->setNZXTMonitor();
         krakenDevice->closeConnections();
         appController->closeQmlApplications();
+        QJsonObject profile;
+        profile.insert("krakenzdriver", krakenDevice->toJsonProfile());
+        profile.insert("appcontroller", appController->toJsonProfile());
         delete appController;
         appController = nullptr;
         delete engine;
         engine = nullptr;
-        QJsonObject profile;
-        profile.insert("krakenzdriver", krakenDevice->toJsonProfile());
-        profile.insert("appcontroller", appController->toJsonProfile());        
         delete krakenDevice;
         krakenDevice = nullptr;
         settingsManager.writeSettingsOnExit(profile); // write settings out
@@ -116,5 +115,7 @@ int main(int argc, char *argv[])
     delete appController;
     delete engine;
     delete krakenDevice;
+    delete icon;
+    qDebug() << "Clean KZP Exit";
     return ret_val;
 }
