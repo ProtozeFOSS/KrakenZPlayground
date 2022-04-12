@@ -9,7 +9,7 @@ Rectangle {
     id: krakenRoot
     color: "#2a2e31"
     property bool showFPS: false
-    property string selectedPath:""
+    property bool deviceReady:false
     Text{
         id: deviceName
         color:"white"
@@ -591,7 +591,7 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         anchors{
             top: fanDutyValue.bottom
-            topMargin:2
+            topMargin:18
             left: parent.left
         }
         font.pixelSize: 22
@@ -660,7 +660,7 @@ Rectangle {
         }
 
         onValueChanged: {
-            if(KrakenZDriver){
+            if(krakenRoot.deviceReady) {
                 KrakenZDriver.setFanDuty(value);
             }
         }
@@ -739,7 +739,6 @@ Rectangle {
         from: 20
         to: 100
         stepSize:1
-        value:KrakenZDriver.pumpDuty
         handle:Rectangle{
             color: "#655e71"
             border.color: "#b9b9b9"
@@ -769,12 +768,13 @@ Rectangle {
                 radius: 2
             }
         }
-
+        height: 36
         onValueChanged: {
-            KrakenZDriver.setPumpDuty(value);
+            if(krakenRoot.deviceReady){
+                KrakenZDriver.setPumpDuty(value);
+            }
         }
 
-        height: 36
     }
     Text{
         id: pumpValue
@@ -889,7 +889,9 @@ Rectangle {
                     lens.opacity = (50 - value)/100;
                 }
             }
-            KrakenZDriver.setBrightness(value);
+            if(krakenRoot.deviceReady) {
+                KrakenZDriver.setBrightness(value);
+            }
         }
 
         height: 36
@@ -997,7 +999,9 @@ Rectangle {
         }
 
         onValueChanged: {
-            AppController.setOrientationFromAngle(value);
+            if(krakenRoot.deviceReady) {
+                AppController.setOrientationFromAngle(value);
+            }
         }
 
         height: 36
@@ -1201,14 +1205,14 @@ Rectangle {
             selectedNameFilter.index: fileLoader.filterIndex
             onAccepted: {
                 if(files.length > 0){
-                    krakenRoot.selectedPath = files[0].toString();
+                    var selectedPath = files[0].toString();
                     fileLoader.folder = folder;
-                    if(krakenRoot.selectedPath.indexOf(".qml") >= 0){ // app
-                        console.log("Loading Qml: " + krakenRoot.selectedPath);
-                        AppController.loadQmlFile(krakenRoot.selectedPath)
+                    if(selectedPath.indexOf(".qml") >= 0){ // app
+                        console.log("Loading Qml: " + selectedPath);
+                        AppController.loadQmlFile(selectedPath)
                     }else{
-                        console.log("Setting image: " + krakenRoot.selectedPath);
-                        AppController.loadImage(krakenRoot.selectedPath);
+                        console.log("Setting image: " + selectedPath);
+                        AppController.loadImage(selectedPath);
                     }
                 }
                 fileLoader.active = false;
@@ -1240,15 +1244,6 @@ Rectangle {
         orientation: ListView.Horizontal
         model: actionModel
     }
-    Timer{
-        id:statusPoll
-        interval:900
-        repeat: true
-        running: false
-        onTriggered: {
-            KrakenZDriver.sendStatusRequest();
-        }
-    }
     Connections{
         target: AppController
         function onAppReady(){
@@ -1256,7 +1251,6 @@ Rectangle {
         }
         function onModeChanged(mode) {
             errorTitle.reset();
-            statusPoll.start();
         }
 
         function onQmlFailed(error) {
@@ -1264,6 +1258,18 @@ Rectangle {
             errorTitle.visible = true;
         }
     }
+    Connections{
+        target: KrakenZDriver
+        function onDeviceReady(){
+            krakenRoot.deviceReady = true;
+            setPumpSlider.value = Qt.binding(function(){return KrakenZDriver.pumpDuty});
+            setFanSlider.value = Qt.binding(function(){return KrakenZDriver.fanDuty});
+            setBrightnessSlider.value = Qt.binding(function(){return KrakenZDriver.brightness});
+            setOrientationSlider.value = Qt.binding(function(){return KrakenZDriver.rotationOffset});
+        }
+
+    }
+
     Component.onCompleted:{
         SystemTray.preventCloseAppWithWindow();
         SettingsManager.applyStartupProfile();

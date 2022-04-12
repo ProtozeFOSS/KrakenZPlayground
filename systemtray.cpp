@@ -84,10 +84,31 @@ void SystemTray::handleProfileSelect(bool checked)
 
 void SystemTray::setJsonProfiles(QJsonArray profiles, QString current)
 {
-    for( const auto &_ : qAsConst(profiles)) {
-        auto profile{_.toObject()};
-        auto profileName{profile.value("name").toString()};
+    auto profileCount{profiles.size()};
+    for( auto index{0}; index < profileCount; ++index) {
+        auto jsonValue{profiles.at(index)};
+        QJsonObject profileObject;
+        if(jsonValue.type() == QJsonValue::Array) {
+            auto wrappedArray = jsonValue.toArray();
+            if(wrappedArray.size()) {
+                profileObject = wrappedArray.at(0).toObject();
+            } else {
+                return;
+            }
+        } else {
+            profileObject = jsonValue.toObject();
+        }
+        QString profileName;
+        QJsonObject data;
+        if(profileObject.isEmpty()) { // bug on linux the object is interpreted as array... grrr
+            profileName = jsonValue[0].toString();
+            data = jsonValue[1].toObject();
+        } else {
+            profileName = profileObject.value("name").toString();
+            data = profileObject.value("data").toObject();
+        }
         auto profileAction{new QAction(profileName,mProfileMenu)};
+        profileAction->setText(profileName);
         mProfileMenu->addAction(profileAction);
         if(profileName.compare(current) == 0){
             mProfileMenu->setActiveAction(profileAction);

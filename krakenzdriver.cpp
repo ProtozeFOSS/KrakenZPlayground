@@ -96,7 +96,8 @@ void KrakenZDriver::initialize()
                     qDebug() << "Failed to open control endpoints: " << mLCDIN->errorString() << " : " << mLCDCTL->errorString();
                     qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
                 } else { // continue if sccuessfully opened device
-                    sendFWRequest();
+                    sendStatusRequest();
+                    QTimer::singleShot(1000, this, &KrakenZDriver::sendFWRequest);
                     mInitialized = true;
                     memset(mFrameOut,0,IMAGE_FRAME_SIZE);
                     errored = false;
@@ -114,7 +115,7 @@ void KrakenZDriver::initialize()
         error_obj.insert(ID_MESSAGE, OPEN_DENIED_STR);
         emit error(error_obj);
     } else {
-        emit deviceReady();
+        QTimer::singleShot(600, this, &KrakenZDriver::deviceReady);
     }
 
 }

@@ -98,8 +98,7 @@ int main(int argc, char *argv[])
         appController.setJsonProfile(data.value("appcontroller").toObject());
     });
     QObject::connect(&settingsManager, &SettingsManager::profilesLoaded, &app, [&settingsManager, &systemTray](){ // on profiles loaded
-        auto profiles{settingsManager.profiles()};
-        systemTray.setJsonProfiles(profiles, settingsManager.currentProfile());
+        systemTray.setJsonProfiles(settingsManager.profiles(), settingsManager.currentProfile());
     });
     engine.load(url);
 

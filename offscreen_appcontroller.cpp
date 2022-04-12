@@ -19,13 +19,17 @@
 #include <QString>
 #include "krakenzdriver.h"
 
-OffscreenAppController::OffscreenAppController(QObject *controller, QObject *parent)
+OffscreenAppController::OffscreenAppController(KrakenZDriver *controller, QObject *parent)
     : QObject(parent), mController(controller), mContainer(nullptr), mCurrentApp(nullptr), mCurrentComponent(nullptr), mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
-    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE), mDrawFPS(false), mPlaying(false)
+    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mStatusTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE), mDrawFPS(false), mPlaying(false)
 {
+
+    mStatusTimer->setInterval(400);
+    mStatusTimer->setSingleShot(false);
+    connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZDriver::sendStatusRequest);
     connect(mDelayTimer, &QTimer::timeout, this, &OffscreenAppController::renderNext);
 }
 
@@ -302,10 +306,12 @@ void OffscreenAppController::setDrawFPS(bool draw_fps)
 
 void OffscreenAppController::setMode(AppMode mode)
 {
+    mStatusTimer->stop();
     if(mode != mMode) {
         mMode = mode;
         if(mMode != AppMode::QML_APP) {
             releaseApplication();
+            mStatusTimer->start();
         }
         emit modeChanged(mode);
     }
@@ -368,7 +374,7 @@ void OffscreenAppController::setOrientationFromAngle(int angle)
     } else {
         setOrientation(Qt::LandscapeOrientation, false);
     }
-    if(mMode == QML_APP) {
+    if(mMode != QML_APP) {
         renderNext();
     }
 }
@@ -378,6 +384,7 @@ bool OffscreenAppController::event(QEvent *event)
     if(event->type() == QEvent::UpdateRequest)
     {
         if(mActive) {
+            mController->sendStatusRequest();
             emit draw();
             mDelayTimer->start();
         }
@@ -445,14 +452,13 @@ void OffscreenAppController::setJsonProfile(QJsonObject profile)
         case AppMode::BUILT_IN:{
             bool ok{false};
             auto type = loadedPath.toInt(&ok);
-            auto controller = qobject_cast<KrakenZDriver*>(mController);
-            if(controller){
-                if(ok) {
+            if(ok){
+                if(mController) {
                     if(type ==  1) {
-                        controller->setBuiltIn(1);
+                        mController->setBuiltIn(1);
                         setBuiltIn(true);
                     }else {
-                        controller->setNZXTMonitor();
+                        mController->setNZXTMonitor();
                         setBuiltIn(false);
                     }
                 }
