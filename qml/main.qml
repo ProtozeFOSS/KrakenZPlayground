@@ -140,10 +140,15 @@ Window {
                     }
                 }
                 Component.onCompleted: {
-                    if(SettingsManager.acceptedAgreement) {
-                        AppController.initialize();
-                        KrakenZDriver.initialize();
-                        container.state = "application"
+                    if(SettingsManager.acceptedAgreement) {                        
+                        if(KrakenZDriver.found){
+                            AppController.initialize();
+                            KrakenZDriver.initialize();
+                            container.state = "application"
+                        }else {
+                            container.state = "missing";
+                            window.visible = true;
+                        }
                     } else {
                         window.visible = true;
                     }

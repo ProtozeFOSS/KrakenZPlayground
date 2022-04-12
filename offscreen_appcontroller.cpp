@@ -374,7 +374,7 @@ void OffscreenAppController::setOrientationFromAngle(int angle)
     } else {
         setOrientation(Qt::LandscapeOrientation, false);
     }
-    if(mMode != QML_APP) {
+    if(mMode == STATIC_IMAGE) {
         renderNext();
     }
 }

@@ -565,6 +565,36 @@ Rectangle{
         top.setArrays(Qt.locale().name);
         top.setCompassText(KrakenZDriver.rotationOffset);
         AppController.setFrameDelay(920);
+        const options = { weekday: 'long', day: 'numeric' };
+        var date = new Date();
+        var hours = date.getHours() + top.hoursPassed;
+        top.lastHour = hours;
+        globe.currentFrame = (80 + (hours * 6)) % 180; // update the globe
+        if(top.is24Hour) {  // set values for 24 hour clock
+            top.currentHour = hours;
+            top.isAm = false;
+        } else {
+            if(hours >= 12) {
+                top.isAm = false;
+                if(hours > 12){
+                    hours -= 12;
+                }
+            }else {
+                top.isAm = true;
+                if(hours == 0) {
+                    hours = 12;
+                }
+            }
+        }
+        hourText.text = hours.toString().padStart(2, '0')
+        // an hour went by? maybe it is a new day!
+        top.dateText = top.weekDays[date.getDay()] + '  ' + date.getDate().toString().padStart(2,'0');
+        monthText.text = top.months[date.getMonth()]
+        yearText.text = date.getFullYear()
+        minuteText.text = date.getMinutes().toString().padStart(2, '0')
+        secondsText.text = date.getSeconds().toString().padStart(2, '0')
+        fanRPM.text = KrakenZDriver.fanSpeed
+        pumpDuty.text = KrakenZDriver.pumpDuty
     }
 
 }

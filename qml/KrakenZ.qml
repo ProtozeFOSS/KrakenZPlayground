@@ -962,12 +962,11 @@ Rectangle {
             left:leftOrientationLabel.right
             right:rightOrientationLabel.left
         }
-        snapMode:Slider.SnapAlways
-        live:false
+        snapMode:Slider.SnapOnRelease
+        live:true
         from: 0
         to: 270
-        stepSize:90
-        value: KrakenZDriver.rotationOffset
+        stepSize:unlockRotation.checked ? 90:1
         handle:Rectangle{
             color: "#655e71"
             border.color: "#b9b9b9"
@@ -1015,9 +1014,6 @@ Rectangle {
             verticalCenter: orientationValue.verticalCenter
             left:parent.left
             leftMargin:18
-        }
-        onCheckedChanged: {
-            setOrientationSlider.stepSize = checked ? 90:1;
         }
     }
     Text{

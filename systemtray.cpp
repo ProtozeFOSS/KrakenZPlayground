@@ -151,7 +151,6 @@ SystemTray::~SystemTray()
 {
     delete mProfileMenu;
     delete mMenu;
-    mTrayIcon->hide();
     delete mTrayIcon;
 
 }
