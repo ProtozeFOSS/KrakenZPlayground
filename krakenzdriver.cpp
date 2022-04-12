@@ -74,6 +74,25 @@ quint16 KrakenZDriver::calculateMemoryStart(quint8 index)
     return 800*index; // needs to be 400 - check what the 3401 (query of the assets after they are set)
 }
 
+void KrakenZDriver::closeConnections()
+{
+    if(mInitialized){
+        mLCDCTL->close();
+        mLCDDATA->close();
+        mLCDIN->close();
+        QObject::disconnect(mLCDCTL);
+        QObject::disconnect(mLCDDATA);
+        QObject::disconnect(mLCDIN);
+        delete mLCDCTL;
+        mLCDCTL = nullptr;
+        delete mLCDDATA;
+        mLCDDATA = nullptr;
+        delete mLCDIN;
+        mLCDIN = nullptr;
+        mInitialized = false;
+    }
+}
+
 void KrakenZDriver::initialize()
 {
     bool errored(true);

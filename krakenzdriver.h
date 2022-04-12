@@ -54,6 +54,7 @@ public:
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
     bool monitorFPS() { return mMeasure.isActive(); }
+    Q_INVOKABLE void closeConnections();
     QJsonObject toJsonProfile();
     ~KrakenZDriver();
     enum WriteTarget{

@@ -45,19 +45,19 @@ int main(int argc, char *argv[])
     previewProvider->setKrakenDevice(krakenDevice);
     QObject::connect(appController, &OffscreenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
     QObject::connect(&systemTray, &SystemTray::profileSelected, &settingsManager, &SettingsManager::selectProfile);
-    QQmlApplicationEngine engine;
-    engine.addImageProvider("krakenz", previewProvider); // will be owned by the engine
-    engine.rootContext()->setContextProperty("AppController", appController);
-    engine.rootContext()->setContextProperty("KrakenZDriver", krakenDevice);
-    engine.rootContext()->setContextProperty("SystemTray", &systemTray);
-    engine.rootContext()->setContextProperty("SettingsManager", &settingsManager);
-    engine.rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
-    engine.rootContext()->setContextProperty("ApplicationPath", app.applicationDirPath());
-    systemTray.setEngine(&engine);
+    auto engine{new QQmlApplicationEngine(&app)};
+    engine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
+    engine->rootContext()->setContextProperty("AppController", appController);
+    engine->rootContext()->setContextProperty("KrakenZDriver", krakenDevice);
+    engine->rootContext()->setContextProperty("SystemTray", &systemTray);
+    engine->rootContext()->setContextProperty("SettingsManager", &settingsManager);
+    engine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
+    engine->rootContext()->setContextProperty("ApplicationData", settingsDir);
+    systemTray.setEngine(engine);
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     // On created main application Qml
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [&engine, icon,appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
+                     &app, [engine, icon,appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
         if(objUrl.toString().endsWith(QStringLiteral("clear")))
             return;
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
         else {
             // get QQuickWindow
             bool errored(true);
-            auto objects = engine.rootObjects();
+            auto objects = engine->rootObjects();
             if(objects.size()) {
                 auto window{qobject_cast<QQuickWindow*>(objects.at(0))};
                 if(window){
@@ -86,13 +86,19 @@ int main(int argc, char *argv[])
         }
     }, Qt::QueuedConnection);
 
-    QObject::connect(&app, &QApplication::aboutToQuit, &app, [&settingsManager, &krakenDevice, appController]{ // on Application close
+    QObject::connect(&app, &QApplication::aboutToQuit, &app, [&settingsManager, &krakenDevice, &appController, &engine]{ // on Application close
         krakenDevice->setNZXTMonitor();
+        krakenDevice->closeConnections();
+        appController->closeQmlApplications();
+        delete appController;
+        appController = nullptr;
+        delete engine;
+        engine = nullptr;
         QJsonObject profile;
         profile.insert("krakenzdriver", krakenDevice->toJsonProfile());
-        profile.insert("appcontroller", appController->toJsonProfile());
+        profile.insert("appcontroller", appController->toJsonProfile());        
         delete krakenDevice;
-        krakenDevice = nullptr; // safe to call delete later if for some reason Qt.quit does not execute, this should gaurantee device relesae
+        krakenDevice = nullptr;
         settingsManager.writeSettingsOnExit(profile); // write settings out
     });
     QObject::connect(&settingsManager, &SettingsManager::profileChanged, &app, [krakenDevice, appController](int index, QJsonObject data){ // on profile changed
@@ -103,14 +109,12 @@ int main(int argc, char *argv[])
     QObject::connect(&settingsManager, &SettingsManager::profilesLoaded, &app, [&settingsManager, &systemTray](){ // on profiles loaded
         systemTray.setJsonProfiles(settingsManager.profiles(), settingsManager.currentProfile());
     });
-    engine.load(url);
+
+    engine->load(url); // Start main.qml
 
     auto ret_val{app.exec()};
     delete appController;
-    url = QUrl(QStringLiteral("clear"));
-    engine.load(url);
-    engine.clearComponentCache();
-    engine.collectGarbage();
-    delete krakenDevice; // to make sure device is released
+    delete engine;
+    delete krakenDevice;
     return ret_val;
 }

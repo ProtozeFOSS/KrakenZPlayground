@@ -63,6 +63,7 @@ public:
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
     QSize screenSize() { return mSize; }
+    void  closeQmlApplications();
     int   currentFPS() { return mFPS; }
     int   depthSize() { return mDepthSize; }
     int   stencilSize() { return mStencilSize; }
@@ -160,7 +161,8 @@ protected:
     void createApplication();
     void createContainer();
     void handleComponentErrors();
-    void releaseApplication(bool deleteComponent = false);
+    void releaseApplication(bool deleteComponent = true);
+    void releaseAppEngine();
     void resetAppEngine();
     void setMode(AppMode mode);
     void reconfigureSurfaceFormat();

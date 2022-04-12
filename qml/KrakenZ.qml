@@ -1103,7 +1103,7 @@ Rectangle {
                 anchors.fill: parent
                 onClicked: {
                     if(fileLoader.folder.length == 0){
-                        fileLoader.folder = ApplicationPath +  "/images/";
+                        fileLoader.folder = ApplicationData;
                     }
                     fileLoader.filterIndex = 0;
                     fileLoader.active = true;
@@ -1144,7 +1144,7 @@ Rectangle {
                 anchors.fill: parent
                 onClicked: {
                     if(fileLoader.folder.length == 0){
-                        fileLoader.folder = ApplicationPath +  "/examples/";
+                        fileLoader.folder = ApplicationData;
                     }
                     fileLoader.filterIndex = 1;
                     fileLoader.active = true;

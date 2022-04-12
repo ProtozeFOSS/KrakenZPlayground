@@ -40,6 +40,13 @@ void OffscreenAppController::adjustAnimationDriver()
     mDelayTimer->setInterval(mFrameDelay);
 }
 
+
+void OffscreenAppController::closeQmlApplications()
+{
+    releaseApplication();
+    releaseAppEngine();
+}
+
 void OffscreenAppController::createApplication()
 {
     auto items = mContainer->childItems();
@@ -237,6 +244,14 @@ void OffscreenAppController::reconfigureSurfaceFormat()
     }
 }
 
+void OffscreenAppController::releaseAppEngine()
+{
+    if(mAppEngine) {
+        delete mAppEngine;
+        mAppEngine = nullptr;
+    }
+}
+
 void OffscreenAppController::releaseApplication(bool deleteComponent)
 {
     if(mCurrentApp) {
@@ -251,6 +266,8 @@ void OffscreenAppController::releaseApplication(bool deleteComponent)
         mAppEngine->collectGarbage();
     }
 }
+
+
 
 void OffscreenAppController::renderNext()
 {
@@ -526,12 +543,7 @@ bool OffscreenAppController::loadQmlFile(QString path)
 
 OffscreenAppController::~OffscreenAppController()
 {
-    mDelayTimer->stop();
-    if(mAppEngine) {
-        mAppEngine->load(":/clear");
-        mAppEngine->clearComponentCache();
-        mAppEngine->collectGarbage();
-    }
+    mDelayTimer->stop()
     delete mDelayTimer;
     delete mCurrentApp;
     delete mContainer;
