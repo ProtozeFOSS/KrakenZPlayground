@@ -543,7 +543,7 @@ bool OffscreenAppController::loadQmlFile(QString path)
 
 OffscreenAppController::~OffscreenAppController()
 {
-    mDelayTimer->stop()
+    mDelayTimer->stop();
     delete mDelayTimer;
     delete mCurrentApp;
     delete mContainer;

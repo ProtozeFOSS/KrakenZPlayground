@@ -56,8 +56,8 @@ int main(int argc, char *argv[])
     systemTray.setEngine(engine);
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     // On created main application Qml
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [engine, icon,appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
+    QObject::connect(engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [engine, icon, appController, &systemTray, url](QObject *obj, const QUrl &objUrl) {
         if(objUrl.toString().endsWith(QStringLiteral("clear")))
             return;
 
