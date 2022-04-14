@@ -1,19 +1,27 @@
-# Kraken Z Playground 1.0 Released!
-Now with improved Clock example
-![KZP v1 0](https://user-images.githubusercontent.com/2994631/161541282-5c88b28d-9776-494f-aafc-01e8075d39bb.gif)
+# Kraken Z Playground 1.1.1 LTS Released!
+Now with profiles and [startup instructions](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/Start-KZP-open-on-startup).
+
+
+<img src="https://user-images.githubusercontent.com/2994631/161541282-5c88b28d-9776-494f-aafc-01e8075d39bb.gif" alt="KZP v1.1.1 LTS" height="424"/> <img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="340"/>
+
 Fun interaction and play with NZXT Kraken Z AIOs and the Qml language. The application connects and communicates with the Kraken Z series AIO through USB. 
 Through the application the user can change pump speeds, fan speeds and brightness. Orientation for the Kraken Z series is handled in software. 
 
-<img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="400"/>
 
 # Latest Release
-[1.0 Download and try](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.0-final)  *now with background rendering goodness!*
+[KZP v1.1.1 LTS](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.1.1) Now confirmed to work wtih Kraken Z53, Z63, and Z73 devices.
 
 # Discussion for App development and bugs
 Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/mCGx8FZP3M)
 
 # Cool Community projects
- - So empty.... 
+
+### [Space Clock (HWVD)](https://github.com/Tpimp/HWVD/blob/master/README.md)
+ ![Space_Clock](https://user-images.githubusercontent.com/2994631/163454974-8674a055-554f-40a6-a211-36c859a826ca.gif)
+ - A "simple" looking space clock face with an animated astronaut 
+
+
+### ... [Add your project here!](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/Contribute-your-project!)
 
  join the discord discussion and share your project or make a pull request with a link and one sentence description of project.
 
