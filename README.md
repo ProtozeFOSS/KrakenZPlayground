@@ -1,6 +1,7 @@
-# Kraken Z Playground 1.1.1 LTS Released!
-Now with profiles and [startup instructions](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/Start-KZP-open-on-startup).
-
+# Kraken Z Playground
+Now with [profiles](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/How-to-use-KZP-profiles%3F) and [startup instructions](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/Start-KZP-open-on-startup).
+## Latest Release
+[KZP v1.1.1 LTS](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.1.1) Now confirmed to work wtih Kraken Z53, Z63, and Z73 devices.
 
 <img src="https://user-images.githubusercontent.com/2994631/161541282-5c88b28d-9776-494f-aafc-01e8075d39bb.gif" alt="KZP v1.1.1 LTS" height="424"/> <img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="340"/>
 
@@ -8,8 +9,6 @@ Fun interaction and play with NZXT Kraken Z AIOs and the Qml language. The appli
 Through the application the user can change pump speeds, fan speeds and brightness. Orientation for the Kraken Z series is handled in software. 
 
 
-# Latest Release
-[KZP v1.1.1 LTS](https://github.com/ProtozeFOSS/KrakenZPlayground/releases/tag/v1.1.1) Now confirmed to work wtih Kraken Z53, Z63, and Z73 devices.
 
 # Discussion for App development and bugs
 Get help and discuss the application on the *Device Chain* discord. Please use Channel [kraken-z-playground](https://discord.gg/mCGx8FZP3M)
