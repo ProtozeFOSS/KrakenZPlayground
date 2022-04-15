@@ -5,7 +5,7 @@ Now with [profiles](https://github.com/ProtozeFOSS/KrakenZPlayground/wiki/How-to
 
 <img src="https://user-images.githubusercontent.com/2994631/161541282-5c88b28d-9776-494f-aafc-01e8075d39bb.gif" alt="KZP v1.1.1 LTS" height="424"/> <img src="./docs/KrakenZPlayground.png" alt="KrakenZPlayground with Peyton Dog" width="340"/>
 
-Fun interaction and play with NZXT Kraken Z AIOs and the Qml language. The application connects and communicates with the Kraken Z series AIO through USB. 
+Fun interaction and play with [NZXT Kraken Z AIOs](https://nzxt.com/product/kraken-z73) and the Qml language. The application connects and communicates with the Kraken Z series AIO through USB. 
 Through the application the user can change pump speeds, fan speeds and brightness. Orientation for the Kraken Z series is handled in software. 
 
 
