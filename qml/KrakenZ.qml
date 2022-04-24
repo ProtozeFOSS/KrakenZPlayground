@@ -230,14 +230,6 @@ Rectangle {
         }
         width:320
         height:320
-        property int frame:0
-        animationImage.onFrameChanged: {
-            krakenPreview.grabToImage(
-               function(result) {
-                   krakenPreview.frame = !krakenPreview.frame
-                   AppController.loadImage(result.image);
-               });
-        }
         layer.enabled:true
         layer.effect:DropShadow{
             transparentBorder: true
@@ -251,8 +243,6 @@ Rectangle {
             color: "#000000"
         }
     }
-
-
     Item{
         id:imageOut
         anchors.centerIn: krakenPreview

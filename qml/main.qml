@@ -89,8 +89,7 @@ Window {
             id: mainApplication
             anchors.fill: parent
             active:false
-            sourceComponent: KrakenZ{
-            }
+            sourceComponent: KrakenZ{}
         }
         Loader{
             id:deviceConfigure

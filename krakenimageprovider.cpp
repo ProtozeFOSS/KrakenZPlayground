@@ -25,6 +25,9 @@ void KrakenImageProvider::imageChanged(QImage frame)
 
 void KrakenImageProvider::setDisplayVisible(bool visible){
     mDisplaying = visible;
+    if(visible) {
+        emit imageReady();
+    }
 }
 
 

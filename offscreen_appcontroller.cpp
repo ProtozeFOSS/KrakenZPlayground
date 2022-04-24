@@ -495,7 +495,7 @@ void OffscreenAppController::setJsonProfile(QJsonObject profile)
         default:;
     }
     int frameDelay = profile.value("frameDelay").toInt(-2);
-    if(frameDelay) {
+    if(frameDelay > 0) {
         setFrameDelay(frameDelay);
     }
 }
