@@ -98,7 +98,6 @@ Window {
             sourceComponent: KrakenZConfigure {
                 onConfigured:{
                     KrakenZDriver.setBuiltIn(1);
-                    KrakenZDriver.setMonitorFPS();
                     imageSetTimer.imageSource = "qrc:/images/Peyton.png";
                     imageSetTimer.start();
                     container.state = "application"
