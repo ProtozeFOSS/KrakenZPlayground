@@ -8,5 +8,6 @@
         <file>qml/MissingDevice.qml</file>
         <file>qml/PermissionDenied.qml</file>
         <file>qml/KrakenZContainer.qml</file>
+        <file>qml/SettingsError.qml</file>
     </qresource>
 </RCC>

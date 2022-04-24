@@ -24,6 +24,20 @@ Window {
     onVisibleChanged: {
         KrakenImageProvider.setDisplayVisible(visible);
     }
+
+    Timer{
+        id:profileTimer
+        running:false
+        interval:100
+        repeat:false
+        onTriggered: {
+            SettingsManager.applyStartupProfile();
+            if(SettingsManager.errored) {
+                container.state = "settings_error";
+            }
+        }
+    }
+
     Rectangle { // Main content container
         id: container
         anchors.fill: parent
@@ -32,7 +46,7 @@ Window {
         Connections{
             target:KrakenZDriver
             enabled: container.state == ""
-            function onError(error){
+            function on(error){
                 container.errorMesage = error.MESSAGE;
                 container.state = "error";
             }
@@ -42,13 +56,13 @@ Window {
             }
         }
         state:""
-
         states:[
             State {
                 name:"" // default user Warning
                 PropertyChanges{target:userWarningLoader; active: true}
                 PropertyChanges{target:deviceConfigure; active: false}
                 PropertyChanges{target:accessError; active: false}
+                PropertyChanges{target:settingsError; active: false}
                 PropertyChanges{target:missingDevice; active: false}
                 PropertyChanges{target:mainApplication; active: false}
             },
@@ -57,6 +71,7 @@ Window {
                 PropertyChanges{target:userWarningLoader; active: false}
                 PropertyChanges{target:deviceConfigure; active: true}
                 PropertyChanges{target:accessError; active: false}
+                PropertyChanges{target:settingsError; active: false}
                 PropertyChanges{target:missingDevice; active: false}
                 PropertyChanges{target:mainApplication; active: false}
             },
@@ -65,6 +80,18 @@ Window {
                 PropertyChanges{target:userWarningLoader; active: false}
                 PropertyChanges{target:deviceConfigure; active: false}
                 PropertyChanges{target:accessError; active: true}
+                PropertyChanges{target:window; visible: true}
+                PropertyChanges{target:settingsError; active: false}
+                PropertyChanges{target:missingDevice; active: false}
+                PropertyChanges{target:mainApplication; active: false}
+            },
+            State {
+                name: "settings_error"
+                PropertyChanges{target:userWarningLoader; active: false}
+                PropertyChanges{target:deviceConfigure; active: false}
+                PropertyChanges{target:accessError; active: false}
+                PropertyChanges{target:window; visible: true}
+                PropertyChanges{target:settingsError; active: true}
                 PropertyChanges{target:missingDevice; active: false}
                 PropertyChanges{target:mainApplication; active: false}
             },
@@ -73,6 +100,8 @@ Window {
                 PropertyChanges{target:userWarningLoader; active: false}
                 PropertyChanges{target:deviceConfigure; active: false}
                 PropertyChanges{target:accessError; active: false}
+                PropertyChanges{target:window; visible: true}
+                PropertyChanges{target:settingsError; active: false}
                 PropertyChanges{target:missingDevice; active: true}
                 PropertyChanges{target:mainApplication; active: false}
             },
@@ -81,6 +110,7 @@ Window {
                 PropertyChanges{target:userWarningLoader; active: false}
                 PropertyChanges{target:deviceConfigure; active: false}
                 PropertyChanges{target:accessError; active: false}
+                PropertyChanges{target:settingsError; active: false}
                 PropertyChanges{target:missingDevice; active: false}
                 PropertyChanges{target:mainApplication; active: true}
             }
@@ -89,7 +119,11 @@ Window {
             id: mainApplication
             anchors.fill: parent
             active:false
-            sourceComponent: KrakenZ{}
+            sourceComponent: KrakenZ{
+                Component.onCompleted: {
+                    profileTimer.start();
+                }
+            }
         }
         Loader{
             id:deviceConfigure
@@ -116,6 +150,12 @@ Window {
             }
         }
         Loader {
+            id: settingsError
+            active: false
+            anchors.fill:parent
+            sourceComponent: SettingsError { }
+        }
+        Loader {
             id: missingDevice
             active: false
             anchors.fill:parent
@@ -138,17 +178,20 @@ Window {
                     }
                 }
                 Component.onCompleted: {
-                    if(SettingsManager.acceptedAgreement) {                        
+                    var acceptedAgreement = SettingsManager.acceptedAgreement;
+                    if(SettingsManager.errored) {
+                        container.state = "settings_error";
+                        return;
+                    }
+
+                    if(acceptedAgreement) {
                         if(KrakenZDriver.found){
                             AppController.initialize();
                             KrakenZDriver.initialize();
                             container.state = "application"
                         }else {
                             container.state = "missing";
-                            window.visible = true;
                         }
-                    } else {
-                        window.visible = true;
                     }
                 }
             }

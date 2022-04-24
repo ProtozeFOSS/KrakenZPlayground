@@ -6,7 +6,7 @@
 #include "krakenzdriver.h"
 
 SettingsManager::SettingsManager(QString directory, QString profile, QObject *parent)
-    : QObject{parent}, mProfileName(profile)
+    : QObject{parent}, mProfileName{profile}, mSettingsErrored{false}
 {
     QDir settingsDir;
     if(!settingsDir.exists(directory)) {
@@ -46,14 +46,8 @@ void SettingsManager::applyStartupProfile()
             }
         }
         if(notFound) {
-            if(mProfileName.compare("Default") != 0) {
-                qDebug() << "Profile" << mProfileName << "was not found, attempting to load Default";
-                mProfileName.clear();
-                applyStartupProfile();
-            } else { // something funky about profiles, dump them
-                qDebug() << "Error Applying profile, even the default one";
-                createDefaultSettings();
-            }
+            mSettingsErrored = true;
+            emit settingsErrored(true);
         }
     }
 }
@@ -65,6 +59,9 @@ void SettingsManager::removeProfile(QString name)
 
 void SettingsManager::createDefaultSettings()
 {
+    if(mSettingsErrored){
+        return;
+    }
     QFile settingsFile(mFilePath);
     if(settingsFile.open(QFile::WriteOnly)) {
         QJsonDocument doc;
@@ -95,10 +92,17 @@ bool SettingsManager::loadSettings()
     QFile settingsFile(mFilePath);
     if(settingsFile.open(QFile::ReadOnly)) {
         auto settingsDoc = QJsonDocument::fromJson(settingsFile.readAll());
-        if(settingsDoc.isObject()) {
+        if(settingsDoc.isObject() && !settingsDoc.isNull()) {
             mSettingsObject = settingsDoc.object();
-            //if(checkValidSettings()) {
-            loaded = true;
+            if(mSettingsObject.size() != 0) {
+                loaded = true;
+            }else {
+                mSettingsErrored = true;
+                emit settingsErrored(mSettingsErrored);
+            }
+        } else {
+            mSettingsErrored = true;
+            emit settingsErrored(mSettingsErrored);
         }
     }
     return loaded;
@@ -131,6 +135,9 @@ void SettingsManager::selectProfile(QString name)
 
 void SettingsManager::writeCurrentSettings()
 {
+    if(mSettingsErrored){
+        return;
+    }
     QFile settingsFile(mFilePath);
     if(settingsFile.open(QFile::WriteOnly)) {
         QJsonDocument doc;
@@ -141,7 +148,6 @@ void SettingsManager::writeCurrentSettings()
 
 void SettingsManager::writeSettingsOnExit(QJsonObject current_settings)
 {
-
     auto profiles = mSettingsObject.value("profiles").toArray();
     if(profiles.size() == 0) {
         // create default profile

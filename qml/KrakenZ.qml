@@ -366,7 +366,7 @@ Rectangle {
     }
 
     Rectangle{
-        id: qmlOptions
+        id: options
         visible: AppController.mode >= AppMode.GIF_MODE
         color: "#8d8d8d"
         anchors.top:krakenPreview.bottom
@@ -377,8 +377,8 @@ Rectangle {
         anchors.left: krakenPreview.left
         anchors.right: krakenPreview.right
         Text{
-            id:qmlTitle
-            text:"Qml Options"
+            id:optionsTitle
+            text:"Options"
             font.bold: true
             font.pixelSize: 20
             font.family: "Cambria"
@@ -393,7 +393,7 @@ Rectangle {
         Column{
             width:parent.width -4
             anchors{
-                top:qmlTitle.bottom
+                top:optionsTitle.bottom
                 bottom:parent.bottom
                 topMargin: 2
                 horizontalCenter: parent.horizontalCenter
@@ -1258,7 +1258,6 @@ Rectangle {
 
     Component.onCompleted:{
         SystemTray.preventCloseAppWithWindow();
-        SettingsManager.applyStartupProfile();
         unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
     }
 }

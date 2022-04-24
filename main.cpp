@@ -8,6 +8,7 @@
 #include "qusbdevice.h"
 #include "systemtray.h"
 #include <QStandardPaths>
+#include <QDir>
 #include <iostream>
 #include "settingsmanager.h"
 
@@ -43,12 +44,21 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
-    auto krakenDevice { new KrakenZDriver(&app) }; // if for some reason you need different PID (driver update?), pass it in here
+    auto krakenDevice { new KrakenZDriver(&app) };
     QString profile;
+    QString settingsDir;
     if(argc > 1){
         profile = argv[1];
+        if(argc > 2) {
+            QDir dir;
+            if(dir.exists(argv[2])) {
+                settingsDir = argv[2];
+            }
+        }
     }
-    auto settingsDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    if(settingsDir.size() == 0) {
+        settingsDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    }
     qDebug() << "Storing settings @" << settingsDir;
     SettingsManager settingsManager(settingsDir, profile, &app);
     auto appController{ new OffscreenAppController(krakenDevice, &app)};
@@ -59,6 +69,7 @@ int main(int argc, char *argv[])
     appController->setRedSize(8);
     appController->setScreenSize(QSize(320,320));
     appController->setStencilSize(16);
+    appController->setPrimaryScreen(app.primaryScreen());
     QObject::connect(appController, &OffscreenAppController::orientationChanged,
                      krakenDevice,  &KrakenZDriver::setScreenOrientation);
     SystemTray  systemTray(&app);
@@ -81,7 +92,7 @@ int main(int argc, char *argv[])
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     // On created main application Qml
     QObject::connect(engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [engine, icon, appController, &systemTray, &url](QObject *obj, const QUrl &objUrl) {
+                     &app, [&engine, &icon, &systemTray, &url](QObject *obj, const QUrl &objUrl) {
         if ((!obj && url == objUrl) ) {
             std::cerr << "Failed to load main.qml\n";
             QCoreApplication::exit(-1);
@@ -96,8 +107,6 @@ int main(int argc, char *argv[])
                     if(icon){
                         window->setIcon(*icon);
                     }
-                    auto screen{window->screen()};
-                    appController->setPrimaryScreen(screen);
                     systemTray.setMainWindow(window);
                     errored = false;
                 }
@@ -110,19 +119,24 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
 
     QObject::connect(&app, &QApplication::aboutToQuit, &app, [&settingsManager, &krakenDevice, &appController, &engine]{ // on Application close
-        krakenDevice->setNZXTMonitor();
-        krakenDevice->closeConnections();
+        auto initialized{krakenDevice->initialized()};
+        if(initialized) {
+            krakenDevice->setNZXTMonitor();
+            krakenDevice->closeConnections();
+        }
         appController->closeQmlApplications();
-        QJsonObject profile;
-        profile.insert("krakenzdriver", krakenDevice->toJsonProfile());
-        profile.insert("appcontroller", appController->toJsonProfile());
+        if(!settingsManager.errored()) {
+            QJsonObject profile;
+            profile.insert("krakenzdriver", krakenDevice->toJsonProfile());
+            profile.insert("appcontroller", appController->toJsonProfile());
+            settingsManager.writeSettingsOnExit(profile); // write settings out
+        }
         delete appController;
         appController = nullptr;
         delete engine;
         engine = nullptr;
         delete krakenDevice;
         krakenDevice = nullptr;
-        settingsManager.writeSettingsOnExit(profile); // write settings out
     });
     QObject::connect(&settingsManager, &SettingsManager::profileChanged, &app, [krakenDevice, appController](int index, QJsonObject data){ // on profile changed
         Q_UNUSED(index)

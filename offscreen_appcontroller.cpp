@@ -323,20 +323,17 @@ void OffscreenAppController::setDrawFPS(bool draw_fps)
 
 void OffscreenAppController::setMode(AppMode mode)
 {
-    if(mode != mMode) {
-        mMode = mode;
-        if(mMode != AppMode::QML_APP) {
-            releaseApplication();
-        }
-        if(mMode >= AppMode::GIF_MODE) {
-            mController->setMonitorFPS();
-            mStatusTimer->stop();
-        }else {
-            mController->setMonitorFPS(false);
-            mStatusTimer->start();
-        }
-        emit modeChanged(mode);
+    mMode = mode;
+    if(mMode <= AppMode::STATIC_IMAGE) {
+        releaseApplication();
+        mController->setMonitorFPS(false);
+        mStatusTimer->start();
+    }else {
+        mController->setMonitorFPS();
+        mStatusTimer->stop();
     }
+    emit modeChanged(mode);
+
 }
 
 void OffscreenAppController::setPrimaryScreen(QScreen *screen)

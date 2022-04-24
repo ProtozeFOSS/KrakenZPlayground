@@ -25,11 +25,13 @@ class SettingsManager : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool acceptedAgreement READ agreed CONSTANT)
+    Q_PROPERTY(bool errored READ errored NOTIFY settingsErrored MEMBER mSettingsErrored)
 public:
     explicit SettingsManager(QString directory,QString profile = QStringLiteral("Default"), QObject *parent = nullptr);
     bool agreed(){return loadSettings();}
+    bool errored(){ return mSettingsErrored; }
     QJsonArray profiles();
-    QString currentProfile() { return mProfileName;}
+    Q_INVOKABLE QString currentProfile() { return mProfileName;}
 
 public slots:
     void addProfile(QString name);
@@ -40,6 +42,7 @@ public slots:
     void writeSettingsOnExit(QJsonObject current_settings);
 
 signals:
+    void settingsErrored(bool errored);
     void profilesLoaded();
     void profileAdded(QString name);
     void profileChanged(int index, QJsonObject data);
@@ -49,6 +52,7 @@ signals:
 protected:
     QString mFilePath;
     QString mProfileName;
+    bool    mSettingsErrored;
     QJsonObject mSettingsObject;
 
     //void openSettings();

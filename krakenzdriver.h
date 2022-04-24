@@ -53,6 +53,7 @@ public:
     int     rotationOffset() { return mRotationOffset; }
     qreal fps() { return mFPS; }
     bool found() { return mFound; }
+    bool initialized() { return mInitialized; }
     bool monitorFPS() { return mMeasure.isActive(); }
     Q_INVOKABLE void closeConnections();
     QJsonObject toJsonProfile();
