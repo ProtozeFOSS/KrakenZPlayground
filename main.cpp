@@ -10,10 +10,34 @@
 #include <QStandardPaths>
 #include <iostream>
 #include "settingsmanager.h"
+
+
+
+
+// HANDLE unix signals (like SIGQUIT for exit on shutdown)
+#ifdef Q_OS_LINUX
+#include"signal.h"
+#include"unistd.h"
+static void kill_server(int sig)
+{
+        QCoreApplication::exit(sig);
+}
+void handleUnixSignals(const std::vector<int>& quitSignals) {
+    // each of these signals calls the handler (quits the QCoreApplication).
+    for ( int sig : quitSignals )
+        signal(sig, kill_server);
+}
+#endif
+
+
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+
+#ifdef Q_OS_LINUX
+    handleUnixSignals({ SIGABRT, SIGINT, SIGQUIT, SIGTERM });
 #endif
 
     qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
@@ -108,14 +132,11 @@ int main(int argc, char *argv[])
     QObject::connect(&settingsManager, &SettingsManager::profilesLoaded, &app, [&settingsManager, &systemTray](){ // on profiles loaded
         systemTray.setJsonProfiles(settingsManager.profiles(), settingsManager.currentProfile());
     });
-
     engine->load(url); // Start main.qml
-
     auto ret_val{app.exec()};
     delete appController;
     delete engine;
     delete krakenDevice;
     delete icon;
-    qDebug() << "Clean KZP Exit";
     return ret_val;
 }

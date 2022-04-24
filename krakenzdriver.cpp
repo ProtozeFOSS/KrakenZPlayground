@@ -316,7 +316,7 @@ void KrakenZDriver::sendBrightness(quint8 brightness)
 
 void KrakenZDriver::setFanDuty(quint8 duty)
 {
-    if(duty >= 0 && duty <= 100){
+    if(duty <= 100){
         QByteArray set_fan;
         set_fan.fill(0x0, _WRITE_LENGTH);
         set_fan[0] = SET_DUTY;
@@ -535,7 +535,7 @@ void KrakenZDriver::sendFWRequest()
 void KrakenZDriver::sendDeleteBucket(quint8 index)
 {
     // precondition check on index
-    if(index > 15 || index < 0){
+    if(index > 15){
         return;
     }
     QByteArray delete_bucket;
@@ -548,7 +548,7 @@ void KrakenZDriver::sendDeleteBucket(quint8 index)
 
 void KrakenZDriver::sendWriteFinishBucket(quint8 index)
 {
-    if(index > 15 || index < 0){
+    if(index > 15){
         return;
     }
     QByteArray finish_write;
@@ -561,7 +561,7 @@ void KrakenZDriver::sendWriteFinishBucket(quint8 index)
 
 void KrakenZDriver::sendWriteStartBucket(quint8 index)
 {
-    if(index > 15 || index < 0){
+    if(index > 15){
         return;
     }
     QByteArray prepare_write;
@@ -590,7 +590,7 @@ void KrakenZDriver::sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot
 
 void KrakenZDriver::sendSwitchBucket(quint8 index, quint8 mode)
 {
-    if(index > 15 || index < 0){
+    if(index > 15){
         return;
     }
     QByteArray switch_bucket;
@@ -619,7 +619,7 @@ void KrakenZDriver::sendStatusRequest()
 void KrakenZDriver::sendQueryBucket(quint8 index, quint8 asset)
 {
     // precondition check on index
-    if(index > 15 || index < 0){
+    if(index > 15){
         return;
     }
     QByteArray query_bucket;
