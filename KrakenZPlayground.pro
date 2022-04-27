@@ -13,6 +13,7 @@ SOURCES += \
         krakenimageprovider.cpp \
         krakenzdriver.cpp \
         main.cpp \
+        onscreen_appcontroller.cpp \
         settingsmanager.cpp \
         systemtray.cpp
 
@@ -36,6 +37,7 @@ HEADERS += \
     offscreen_appcontroller.h \
     krakenimageprovider.h \
     krakenzdriver.h \
+    onscreen_appcontroller.h \
     settingsmanager.h \
     systemtray.h
 

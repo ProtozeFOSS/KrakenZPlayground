@@ -19,7 +19,7 @@
 #include <QString>
 #include "krakenzdriver.h"
 
-OffscreenAppController::OffscreenAppController(KrakenZDriver *controller, QObject *parent)
+OffscreenAppController::OffscreenAppController(KrakenZInterface *controller, QObject *parent)
     : QObject(parent), mController(controller), mContainer(nullptr), mCurrentApp(nullptr), mCurrentComponent(nullptr), mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
@@ -29,7 +29,7 @@ OffscreenAppController::OffscreenAppController(KrakenZDriver *controller, QObjec
 
     mStatusTimer->setInterval(400);
     mStatusTimer->setSingleShot(false);
-    connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZDriver::sendStatusRequest);
+    connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZInterface::sendStatusRequest);
     connect(mDelayTimer, &QTimer::timeout, this, &OffscreenAppController::renderNext);
 }
 
@@ -255,6 +255,7 @@ void OffscreenAppController::releaseAppEngine()
 void OffscreenAppController::releaseApplication(bool deleteComponent)
 {
     if(mCurrentApp) {
+        mDelayTimer->stop();
         mCurrentApp->setVisible(false);
         mCurrentApp->setParentItem(nullptr);
         delete mCurrentApp;

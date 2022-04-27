@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import OffscreenApp 1.0
+import com.kzp.screens 1.0
 Rectangle {
     id: background
     color:"black"
@@ -7,12 +7,12 @@ Rectangle {
         target:AppController
         function onModeChanged(mode) {
             switch(mode) {
-                case AppMode.GIF_MODE: {
+                case OffscreenApp.GIF_MODE: {
                     AppController.animationPlaying = true;
                     break;
                 }
                 default:{
-                    if(mode === AppMode.QML_APP){
+                    if(mode === OffscreenApp.QML_APP){
                         AppController.renderNext();
                     }
                     break;
@@ -31,16 +31,16 @@ Rectangle {
         anchors.centerIn:parent
         width:320
         height:320
-        visible:AppController.mode === AppMode.QML_APP
+        visible:AppController.mode === OffscreenApp.QML_APP
     }
 
     AnimatedImage{
         id: animatedImage
         smooth: true
-        visible: AppController.mode == AppMode.GIF_MODE
+        visible: AppController.mode == OffscreenApp.GIF_MODE
         cache: false
         fillMode: Image.PreserveAspectCrop
-        source:AppController.mode == AppMode.GIF_MODE ?  AppController.loadedPath:""
+        source:AppController.mode == OffscreenApp.GIF_MODE ?  AppController.loadedPath:""
         playing:AppController.animationPlaying && animatedImage.visible
         anchors.centerIn: parent
         width:320
@@ -52,10 +52,10 @@ Rectangle {
     Image{
         id: image
         smooth: true
-        visible: AppController.mode == AppMode.STATIC_IMAGE
+        visible: AppController.mode == OffscreenApp.STATIC_IMAGE
         cache: false
         fillMode: Image.PreserveAspectCrop
-        source:AppController.mode == AppMode.STATIC_IMAGE ?  AppController.loadedPath:""
+        source:AppController.mode == OffscreenApp.STATIC_IMAGE ?  AppController.loadedPath:""
         anchors.centerIn: parent
         width:320
         height:320

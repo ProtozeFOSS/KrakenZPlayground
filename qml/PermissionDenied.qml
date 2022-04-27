@@ -1,8 +1,10 @@
 import QtQuick 2.15
 
 Rectangle {
+    id: permissionRoot
     color:"#2a2e31"
     property alias errorMessage: error.text
+    signal useSoftware()
     Rectangle{
         border.color: "black"
         color: "#ffce47"
@@ -76,6 +78,31 @@ Rectangle {
         Rectangle{
             anchors.bottom: parent.bottom
             anchors.horizontalCenter:  parent.horizontalCenter
+            anchors.horizontalCenterOffset: -84
+            anchors.bottomMargin: 20
+            width:180
+            height:80
+            radius:8
+            border.color: "white"
+            color:"green"
+            Text{
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color:"white"
+                text:"Use Software\nDriver"
+                font.pixelSize: 24
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: permissionRoot.useSoftware()
+            }
+        }
+
+        Rectangle{
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter:  parent.horizontalCenter
+            anchors.horizontalCenterOffset: 84
             anchors.bottomMargin: 20
             width:180
             height:80

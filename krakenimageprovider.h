@@ -4,13 +4,13 @@
 #include <QQuickImageProvider>
 #include <QImage>
 
-class KrakenZDriver;
+class KrakenZInterface;
 class KrakenImageProvider : public QObject, public QQuickImageProvider
 {
     Q_OBJECT
 public:
     explicit KrakenImageProvider(QObject* parent = nullptr);
-    void setKrakenDevice(KrakenZDriver* device);
+    void setKrakenDevice(KrakenZInterface *device);
     QImage requestImage(const QString &id, QSize *size, const QSize &requested_size) override;
 
 signals:
@@ -21,7 +21,7 @@ public slots:
     void imageChanged(QImage frame);
 protected:
     QImage             mImageBuffer;
-    KrakenZDriver*     mDevice;
+    KrakenZInterface*     mDevice;
     bool               mDisplaying;
 };
 

@@ -43,7 +43,7 @@ union CHANNEL_SPEED
 };
 
 KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
-    : QObject(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
+    : KrakenZInterface(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
       mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mBufferIndex(-1), mImageIndex(1), mBytesLeft(0), mBytesSent(0), mApplyAfterSet(false), mWritingImage(true), mFrames(0), mFPS(0)
 {
     QUsb usb;

@@ -11,7 +11,7 @@
 #include <QJsonObject>
 #include <QAnimationDriver>
 
-class KrakenZDriver;
+class KrakenZInterface;
 class QQuickItem;
 class QTimer;
 class QOpenGLContext;
@@ -52,7 +52,7 @@ class OffscreenAppController : public QObject
     Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
 
 public:
-    OffscreenAppController(KrakenZDriver* controller, QObject* parent = nullptr);
+    OffscreenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
     ~OffscreenAppController();
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
@@ -118,11 +118,11 @@ protected slots:
     void renderNext();
 
 protected:
-    KrakenZDriver* mController;
-    QQuickItem*    mContainer;
-    QQuickItem*    mCurrentApp;
-    QQmlComponent* mCurrentComponent;
-    QQmlComponent* mContainerComponent;
+    KrakenZInterface* mController;
+    QQuickItem*       mContainer;
+    QQuickItem*       mCurrentApp;
+    QQmlComponent*    mCurrentComponent;
+    QQmlComponent*    mContainerComponent;
 
     // Offscreen rendering
     QOffscreenSurface*         mOffscreenSurface;

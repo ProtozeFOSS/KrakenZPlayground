@@ -3,7 +3,7 @@ import QtQml.Models 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.platform 1.1
-import OffscreenApp 1.0
+import com.kzp.screens 1.0
 import QtGraphicalEffects 1.15
 Rectangle {
     id: krakenRoot
@@ -284,7 +284,7 @@ Rectangle {
             visible:errorTitle.visible
         }
         Rectangle{
-            visible: krakenRoot.showFPS && (AppController.mode > AppMode.STATIC_IMAGE)
+            visible: krakenRoot.showFPS && (AppController.mode > OffscreenApp.STATIC_IMAGE)
             anchors.bottom:parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
             height: 28
@@ -316,7 +316,7 @@ Rectangle {
     }
     Rectangle{
         id:builtinMode
-        visible: AppController.mode == AppMode.BUILT_IN
+        visible: AppController.mode == OffscreenApp.BUILT_IN
         anchors.centerIn: krakenPreview
         width:320
         height:320
@@ -340,7 +340,7 @@ Rectangle {
         width:48
         height:width
         radius:width
-        visible:AppController.mode === AppMode.GIF_MODE
+        visible:AppController.mode === OffscreenApp.GIF_MODE
         anchors{
             bottom:krakenPreview.bottom
             right:krakenPreview.right
@@ -367,13 +367,13 @@ Rectangle {
 
     Rectangle{
         id: options
-        visible: AppController.mode >= AppMode.GIF_MODE
+        visible: AppController.mode >= OffscreenApp.GIF_MODE
         color: "#8d8d8d"
         anchors.top:krakenPreview.bottom
         anchors.topMargin: 8
         radius:6
         border.color: "#004d4d4d"
-        height:AppController.mode > AppMode.GIF_MODE ?  206:138
+        height:AppController.mode > OffscreenApp.GIF_MODE ?  206:138
         anchors.left: krakenPreview.left
         anchors.right: krakenPreview.right
         Text{
@@ -479,7 +479,7 @@ Rectangle {
                 height:48
                 width:parent.width-8
                 color:"transparent"
-                visible: AppController.mode > AppMode.GIF_MODE
+                visible: AppController.mode > OffscreenApp.GIF_MODE
                 Text{
                     id: lowDelay
                     color:"white"

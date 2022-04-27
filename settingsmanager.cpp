@@ -29,8 +29,6 @@ void SettingsManager::applyStartupProfile()
 {
     auto profileName{mProfileName.size() ? mProfileName:mSettingsObject.value("startProfile").toString()};
     if(profileName.size()) {
-        // seach through the profiles and fine definition for profileName
-        qDebug() << "Setting startup profile:" << profileName;
         auto profiles = mSettingsObject.value("profiles").toArray();
         auto profileCount = profiles.size();
         bool notFound(true);

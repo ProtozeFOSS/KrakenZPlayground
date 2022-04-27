@@ -10,6 +10,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <iostream>
+#include "onscreen_appcontroller.h"
 #include "settingsmanager.h"
 
 
@@ -30,6 +31,9 @@ void handleUnixSignals(const std::vector<int>& quitSignals) {
 }
 #endif
 
+static constexpr char APPLICATION_URI[] = "com.kzp.screens";
+static constexpr char OFFAPP[] = "OffscreenApp";
+static constexpr char KZPAPP[] = "KZPController";
 
 int main(int argc, char *argv[])
 {
@@ -41,10 +45,12 @@ int main(int argc, char *argv[])
     handleUnixSignals({ SIGABRT, SIGINT, SIGQUIT, SIGTERM });
 #endif
 
-    qmlRegisterUncreatableType<OffscreenAppController>("OffscreenApp", 1, 0, "AppMode", "Cant make this");
+    qmlRegisterUncreatableType<OffscreenAppController>(APPLICATION_URI, 1, 0, OFFAPP, "Cant make this");
+    qmlRegisterType<KZPController>(APPLICATION_URI, 1, 0, KZPAPP);
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
-    auto krakenDevice { new KrakenZDriver(&app) };
+    auto driverSelect{new KrakenZDriverSelect{&app}}; // Default is Hardware
+    auto krakenDevice { driverSelect->currentDriver()};
     QString profile;
     QString settingsDir;
     if(argc > 1){
@@ -59,7 +65,7 @@ int main(int argc, char *argv[])
     if(settingsDir.size() == 0) {
         settingsDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     }
-    qDebug() << "Storing settings @" << settingsDir;
+    qDebug() << "Loading settings from" << settingsDir;
     SettingsManager settingsManager(settingsDir, profile, &app);
     auto appController{ new OffscreenAppController(krakenDevice, &app)};
     appController->setAlphaSize(8);
@@ -71,33 +77,37 @@ int main(int argc, char *argv[])
     appController->setStencilSize(16);
     appController->setPrimaryScreen(app.primaryScreen());
     QObject::connect(appController, &OffscreenAppController::orientationChanged,
-                     krakenDevice,  &KrakenZDriver::setScreenOrientation);
+                     krakenDevice,  &KrakenZInterface::setScreenOrientation);
     SystemTray  systemTray(&app);
-    QPixmap iconPixmap(":/images/Droplet.png");
-    auto icon{new QIcon(iconPixmap)};
-    systemTray.setIcon(*icon);
+
     auto previewProvider = new KrakenImageProvider(&app);
     previewProvider->setKrakenDevice(krakenDevice);
     QObject::connect(appController, &OffscreenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
     QObject::connect(&systemTray, &SystemTray::profileSelected, &settingsManager, &SettingsManager::selectProfile);
     auto engine{new QQmlApplicationEngine(&app)};
+    QObject::connect(driverSelect, &KrakenZDriverSelect::driverChanged, engine, [&engine](QObject* driver){
+        engine->rootContext()->setContextProperty("KrakenZDriver", driver);
+    });
     engine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
     engine->rootContext()->setContextProperty("AppController", appController);
-    engine->rootContext()->setContextProperty("KrakenZDriver", krakenDevice);
     engine->rootContext()->setContextProperty("SystemTray", &systemTray);
     engine->rootContext()->setContextProperty("SettingsManager", &settingsManager);
     engine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
     engine->rootContext()->setContextProperty("ApplicationData", settingsDir);
+    engine->rootContext()->setContextProperty("KrakenZDriver", krakenDevice);
     systemTray.setEngine(engine);
     QUrl url(QStringLiteral("qrc:/qml/main.qml"));
     // On created main application Qml
     QObject::connect(engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [&engine, &icon, &systemTray, &url](QObject *obj, const QUrl &objUrl) {
+                     &app, [&engine, &systemTray, &url](QObject *obj, const QUrl &objUrl) {
         if ((!obj && url == objUrl) ) {
             std::cerr << "Failed to load main.qml\n";
             QCoreApplication::exit(-1);
         }
         else {
+            QPixmap iconPixmap(":/images/Droplet.png");
+            auto icon{new QIcon(iconPixmap)};
+            systemTray.setIcon(*icon);
             // get QQuickWindow
             bool errored(true);
             auto objects = engine->rootObjects();
@@ -122,7 +132,6 @@ int main(int argc, char *argv[])
         auto initialized{krakenDevice->initialized()};
         if(initialized) {
             krakenDevice->setNZXTMonitor();
-            krakenDevice->closeConnections();
         }
         appController->closeQmlApplications();
         if(!settingsManager.errored()) {
@@ -151,6 +160,5 @@ int main(int argc, char *argv[])
     delete appController;
     delete engine;
     delete krakenDevice;
-    delete icon;
     return ret_val;
 }

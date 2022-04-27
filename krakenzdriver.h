@@ -9,11 +9,9 @@
 #include <QTimer>
 #include "qusbendpoint.h"
 #include <QJsonObject>
+#include <QApplication>
 
-class QQuickItemGrabResult;
 
-class QUsbDevice;
-const int IMAGE_FRAME_SIZE = 409600;
 struct  TempPoint{
     quint8  temp;
     quint8  point;
@@ -22,42 +20,24 @@ struct  TempPoint{
     TempPoint& operator=(const TempPoint&)= default;
 };
 
-class KrakenZDriver : public QObject
-{
+class KrakenZInterface : public QObject{
     Q_OBJECT
-    Q_PROPERTY( bool  found READ found NOTIFY foundChanged MEMBER mFound)
-    Q_PROPERTY( qreal liquidTemperature READ liquidTemperature NOTIFY liquidTemperatureChanged MEMBER mLiquidTemp)
-    Q_PROPERTY( quint16 pumpSpeed READ pumpSpeed NOTIFY pumpSpeedChanged MEMBER mPumpSpeed)
-    Q_PROPERTY( quint16 fanSpeed READ fanSpeed NOTIFY fanSpeedChanged MEMBER mFanSpeed)
-    Q_PROPERTY( quint8 pumpDuty READ pumpDuty WRITE setPumpDuty NOTIFY pumpDutyChanged MEMBER mPumpDuty)
-    Q_PROPERTY( quint8 fanDuty READ fanDuty WRITE setFanDuty NOTIFY fanDutyChanged MEMBER mFanDuty)
-    Q_PROPERTY( QString version READ version NOTIFY versionChanged MEMBER mVersion)
-    Q_PROPERTY( QString fwInfo READ fwInfo NOTIFY fwInfoChanged MEMBER mFwInfo)
-    Q_PROPERTY( int rotationOffset READ rotationOffset WRITE setRotationOffset NOTIFY rotationOffsetChanged MEMBER mRotationOffset)
-    Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged MEMBER mFPS)
-    Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged MEMBER mBrightness)
-    Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged MEMBER mImageIndex)
+    Q_PROPERTY( bool  found READ found NOTIFY foundChanged)
+    Q_PROPERTY( qreal liquidTemperature READ liquidTemperature NOTIFY liquidTemperatureChanged)
+    Q_PROPERTY( quint16 pumpSpeed READ pumpSpeed NOTIFY pumpSpeedChanged)
+    Q_PROPERTY( quint16 fanSpeed READ fanSpeed NOTIFY fanSpeedChanged)
+    Q_PROPERTY( quint8 pumpDuty READ pumpDuty WRITE setPumpDuty NOTIFY pumpDutyChanged)
+    Q_PROPERTY( quint8 fanDuty READ fanDuty WRITE setFanDuty NOTIFY fanDutyChanged)
+    Q_PROPERTY( QString version READ version NOTIFY versionChanged)
+    Q_PROPERTY( QString fwInfo READ fwInfo NOTIFY fwInfoChanged)
+    Q_PROPERTY( int rotationOffset READ rotationOffset WRITE setRotationOffset NOTIFY rotationOffsetChanged)
+    Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged)
+    Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged)
+    Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged)
     Q_PROPERTY( bool monitorFPS READ monitorFPS WRITE setMonitorFPS NOTIFY monitorFPSChanged)
+
 public:
-    explicit KrakenZDriver(QObject *parent = nullptr, quint16 VID = 0x1e71, quint16 PID = 0x3008);
-    static quint16 calculateMemoryStart(quint8 index);
-    qreal liquidTemperature() { return mLiquidTemp; }
-    quint16 pumpSpeed() { return mPumpSpeed; }
-    quint16 fanSpeed() { return mFanSpeed; }
-    quint8 pumpDuty() { return mPumpDuty; }
-    quint8 fanDuty() { return mFanDuty; }
-    quint8 brightness() { return mBrightness; }
-    QString version() { return mVersion; }
-    QString fwInfo() { return mFwInfo; }
-    short bucket() { return mImageIndex; }
-    int     rotationOffset() { return mRotationOffset; }
-    qreal fps() { return mFPS; }
-    bool found() { return mFound; }
-    bool initialized() { return mInitialized; }
-    bool monitorFPS() { return mMeasure.isActive(); }
-    Q_INVOKABLE void closeConnections();
-    QJsonObject toJsonProfile();
-    ~KrakenZDriver();
+    KrakenZInterface(QObject* parent = nullptr) : QObject(parent){}
     enum WriteTarget{
         NO_TARGET = 0x00,
         FW_INFO = 0x10,
@@ -118,68 +98,151 @@ public:
     };
 
     Q_ENUM(WriteTarget)
+    virtual qreal liquidTemperature() { return 30; }
+    virtual quint16 pumpSpeed() { return 1000; }
+    virtual quint16 fanSpeed() { return 1000; }
+    virtual quint8 pumpDuty() { return 50; }
+    virtual quint8 fanDuty() { return 50; }
+    virtual quint8 brightness() { return 50; }
+    virtual QString version() { return QStringLiteral("v.interface.class"); }
+    virtual QString fwInfo() { return QStringLiteral("v.fw.info"); }
+    virtual short bucket() { return 0; }
+    virtual int     rotationOffset() { return 0; }
+    virtual qreal fps() { return 0; }
+    virtual bool found() { return false; }
+    virtual bool initialized() { return false; }
+    virtual bool monitorFPS() { return false; }
+    virtual QJsonObject toJsonProfile(){ return QJsonObject(); }
 
 signals:
-    void foundChanged(bool found);
-    void fpsChanged(qreal fps);
-    void liquidTemperatureChanged(qreal temperature);
-    void pumpSpeedChanged(quint16 pump_rpm);
-    void brightnessChanged(quint8 brightness);
-    void fanSpeedChanged(quint16 fan_rpm);
-    void pumpDutyChanged(quint8 duty_percent);
-    void fanDutyChanged(quint8 duty_percent);
-    void fwInfoChanged(QString fwInfo);
-    void versionChanged(QString version);
+    void foundChanged(bool);
+    void fpsChanged(qreal);
+    void liquidTemperatureChanged(qreal);
+    void pumpSpeedChanged(quint16);
+    void brightnessChanged(quint8);
+    void fanSpeedChanged(quint16);
+    void pumpDutyChanged(quint8);
+    void fanDutyChanged(quint8);
+    void fwInfoChanged(QString);
+    void versionChanged(QString);
     void deviceReady();
-    void rotationOffsetChanged(int rotation);
-    void error(QJsonObject response);
-    void bucketChanged(quint8 bucket);
-    void monitorFPSChanged(bool monitor);
+    void rotationOffsetChanged(int);
+    void error(QJsonObject);
+    void bucketChanged(quint8);
+    void monitorFPSChanged(bool);
 
 public slots:
-    void blankScreen();
-    void initialize();
-    void startMonitoringFramerate();
-    void stopMonitoringFramerate();
-    void setBrightness(quint8 brightness);
-    void setFanDuty(quint8 duty);
-    void setPumpDuty(quint8 duty); // flat
-    void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true);
-    void setJsonProfile(QJsonObject profile);
-    void setRotationOffset(int offset);
-    void sendStatusRequest();
-    void sendHex(QString hex_data, bool pad = true);
-    void moveToBucket( int bucket = 0);
-    void setNZXTMonitor();
-    void setBuiltIn(quint8 index);
-    void setScreenOrientation(Qt::ScreenOrientation orientation);
-    void setMonitorFPS(bool monitor = true);
-    void sendFWRequest();
+    virtual void blankScreen(){}
+    virtual void initialize(){}
+    virtual void startMonitoringFramerate(){}
+    virtual void stopMonitoringFramerate(){}
+    virtual void setBrightness(quint8){}
+    virtual void setFanDuty(quint8){}
+    virtual void setPumpDuty(quint8){} // flat
+    virtual void setImage(QImage, quint8 = 0, bool = true){}
+    virtual void setJsonProfile(QJsonObject){}
+    virtual void setRotationOffset(int){}
+    virtual void sendStatusRequest(){}
+    virtual void sendHex(QString, bool){}
+    virtual void moveToBucket( int){}
+    virtual void setNZXTMonitor(){}
+    virtual void setBuiltIn(quint8){}
+    virtual void setScreenOrientation(Qt::ScreenOrientation){}
+    virtual void setMonitorFPS(bool = true){}
+    virtual void sendFWRequest(){}
+
+protected:
+    virtual void parseFWVersion(QByteArray&){}
+    virtual void parseStatus(QByteArray&){}
+    virtual void parseDeleteBucket(QByteArray&){}
+
+    // Control messages
+    virtual void sendBrightness(quint8){}
+    virtual void sendFanDuty(quint8){}
+    virtual void sendPumpDuty(quint8){}
+    virtual void sendQueryBucket(quint8, quint8){}
+    virtual void sendDeleteBucket(quint8){}
+    virtual void sendSwitchBucket(quint8, quint8){}
+    virtual void sendSwitchLiquidTempMode(){}
+    virtual void sendSetupBucket(quint8, quint8, quint16, quint16){}
+    virtual void sendWriteStartBucket(quint8){}
+    virtual void sendWriteFinishBucket(quint8){}
+    virtual void sendSetDutyProfile(quint8, const QList<TempPoint>&){}
+    // Bulk Transfer CTRL Message
+    virtual void sendBulkDataInfo(quint8, quint32){}
+};
+
+class QQuickItemGrabResult;
+
+class QUsbDevice;
+const int IMAGE_FRAME_SIZE = 409600;
+
+class KrakenZDriver : public KrakenZInterface
+{
+    Q_OBJECT
+public:
+    explicit KrakenZDriver(QObject *parent = nullptr, quint16 VID = 0x1e71, quint16 PID = 0x3008);
+    static quint16 calculateMemoryStart(quint8 index);
+    qreal liquidTemperature() override { return mLiquidTemp; }
+    quint16 pumpSpeed() override { return mPumpSpeed; }
+    quint16 fanSpeed() override { return mFanSpeed; }
+    quint8 pumpDuty() override { return mPumpDuty; }
+    quint8 fanDuty() override { return mFanDuty; }
+    quint8 brightness() override { return mBrightness; }
+    QString version() override { return mVersion; }
+    QString fwInfo() override { return mFwInfo; }
+    short bucket() override { return mImageIndex; }
+    int     rotationOffset() override { return mRotationOffset; }
+    qreal fps() override { return mFPS; }
+    bool found() override { return mFound; }
+    bool initialized() override { return mInitialized; }
+    bool monitorFPS() override { return mMeasure.isActive(); }
+    Q_INVOKABLE void closeConnections();
+    QJsonObject toJsonProfile() override;
+    ~KrakenZDriver();
+
+
+public slots:
+    void blankScreen() override;
+    void initialize() override;
+    void startMonitoringFramerate() override;
+    void stopMonitoringFramerate() override;
+    void setBrightness(quint8 brightness) override;
+    void setFanDuty(quint8 duty) override;
+    void setPumpDuty(quint8 duty) override; // flat
+    void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true) override;
+    void setJsonProfile(QJsonObject profile) override;
+    void setRotationOffset(int offset) override;
+    void sendStatusRequest() override;
+    void sendHex(QString hex_data, bool pad = true) override;
+    void moveToBucket( int bucket = 0) override;
+    void setNZXTMonitor() override;
+    void setBuiltIn(quint8 index) override;
+    void setScreenOrientation(Qt::ScreenOrientation orientation) override;
+    void setMonitorFPS(bool monitor = true) override;
+    void sendFWRequest() override;
 
 protected slots:
     void receivedControlResponse();
     void updateFrameRate();
 
 protected:
-    void parseFWVersion(QByteArray& data);
-    void parseStatus(QByteArray& data);
-    void parseDeleteBucket(QByteArray& data);
+    void parseFWVersion(QByteArray& data) override;
+    void parseStatus(QByteArray& data) override;
+    void parseDeleteBucket(QByteArray& data) override;
 
     // Control messages
-    void sendBrightness(quint8 brightness);
-    void sendFanDuty(quint8 duty);
-    void sendPumpDuty(quint8 duty);
-    void sendQueryBucket(quint8 index, quint8 asset = 0);
-    void sendDeleteBucket(quint8 index);
-    void sendSwitchBucket(quint8 index, quint8 mode = 4);
-    void sendSwitchLiquidTempMode();
-    void sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot, quint16 memory_slot_count);
-    void sendWriteStartBucket(quint8 index);
-    void sendWriteFinishBucket(quint8 index);
-    void sendSetDutyProfile(quint8 channel, const QList<TempPoint>& profile);
+    void sendBrightness(quint8 brightness) override;
+    void sendQueryBucket(quint8 index, quint8 asset = 0) override;
+    void sendDeleteBucket(quint8 index) override;
+    void sendSwitchBucket(quint8 index, quint8 mode = 4) override;
+    void sendSwitchLiquidTempMode() override;
+    void sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot, quint16 memory_slot_count) override;
+    void sendWriteStartBucket(quint8 index) override;
+    void sendWriteFinishBucket(quint8 index) override;
 
     // Bulk Transfer CTRL Message
-    void sendBulkDataInfo(quint8 mode = 2, quint32 size = 3276800);
+    void sendBulkDataInfo(quint8 mode = 2, quint32 size = 3276800) override;
 
     bool           mFound;
     bool           mInitialized;
@@ -215,6 +278,79 @@ protected:
     quint32             mFrameDelay;
     qreal               mFPS;
 
+};
+
+static KrakenZInterface*  CURRENT_KRAKENZ_DRIVER = nullptr;
+static KrakenZInterface*  HARDWARE_DRIVER = nullptr;
+static KrakenZInterface*  SOFTWARE_DRIVER = nullptr;
+
+class KrakenZSoftware: public KrakenZInterface {
+    Q_OBJECT
+public:
+    KrakenZSoftware(QObject* parent = nullptr) : KrakenZInterface(parent){};
+};
+
+class KrakenZDriverSelect: public QObject{
+
+    Q_OBJECT
+public:
+    enum DriverType{
+        SOFTWARE=0,
+        HARDWARE=1
+    };
+    Q_ENUM(DriverType)
+    KrakenZDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type = DriverType::HARDWARE) : QObject{app}, mApp{app}
+    {
+        selectDriver(type);
+    }
+    KrakenZInterface* currentDriver() { return CURRENT_KRAKENZ_DRIVER; }
+    void setCurrentDriver(KrakenZInterface* driver) // C++ only
+    {
+        if(driver != CURRENT_KRAKENZ_DRIVER){
+            CURRENT_KRAKENZ_DRIVER = driver;
+            emit driverChanged(driver);
+        }
+    }
+protected:
+
+    void releaseSoftwareDriver()
+    {
+        delete SOFTWARE_DRIVER;
+        SOFTWARE_DRIVER = nullptr;
+    }
+    void releaseHardwareDriver()
+    {
+        delete HARDWARE_DRIVER;
+        HARDWARE_DRIVER = nullptr;
+    }
+public:
+    void releaseDrivers() // can release all resources before destructor
+    {
+        releaseSoftwareDriver();
+        releaseHardwareDriver();
+    }
+    Q_INVOKABLE void selectDriver(KrakenZDriverSelect::DriverType type)
+    {
+        if(type == DriverType::SOFTWARE){
+            if(!SOFTWARE_DRIVER){
+                SOFTWARE_DRIVER = new KrakenZSoftware{mApp};
+            }
+            releaseHardwareDriver();
+            setCurrentDriver(SOFTWARE_DRIVER);
+        } else {
+            if(!HARDWARE_DRIVER){
+                HARDWARE_DRIVER = new KrakenZDriver{mApp};
+            }
+            releaseSoftwareDriver();
+            setCurrentDriver(HARDWARE_DRIVER);
+        }
+    }
+
+signals:
+    void driverChanged(QObject* driver);
+
+protected:
+    QApplication*    mApp;
 };
 
 #endif // KRAKENZDRIVER_H

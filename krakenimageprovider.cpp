@@ -7,7 +7,7 @@ KrakenImageProvider::KrakenImageProvider(QObject *parent) : QObject(parent), QQu
 
 }
 
-void KrakenImageProvider::setKrakenDevice(KrakenZDriver *device)
+void KrakenImageProvider::setKrakenDevice(KrakenZInterface *device)
 {
     mDevice = device;
 }

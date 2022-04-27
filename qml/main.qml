@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
+import com.kzp.screens 1.0
 
 Window {
     id:window
@@ -10,6 +11,10 @@ Window {
     minimumWidth:600
     maximumHeight:720
     maximumWidth: 600
+    KZPController{
+        id: appController
+        container:container
+    }
 
     Timer{
         id: imageSetTimer
@@ -23,19 +28,6 @@ Window {
     }
     onVisibleChanged: {
         KrakenImageProvider.setDisplayVisible(visible);
-    }
-
-    Timer{
-        id:profileTimer
-        running:false
-        interval:100
-        repeat:false
-        onTriggered: {
-            SettingsManager.applyStartupProfile();
-            if(SettingsManager.errored) {
-                container.state = "settings_error";
-            }
-        }
     }
 
     Rectangle { // Main content container
@@ -119,11 +111,7 @@ Window {
             id: mainApplication
             anchors.fill: parent
             active:false
-            sourceComponent: KrakenZ{
-                Component.onCompleted: {
-                    profileTimer.start();
-                }
-            }
+            sourceComponent: KrakenZ{}
         }
         Loader{
             id:deviceConfigure
@@ -186,6 +174,7 @@ Window {
 
                     if(acceptedAgreement) {
                         if(KrakenZDriver.found){
+                            SystemTray.setVisible();
                             AppController.initialize();
                             KrakenZDriver.initialize();
                             container.state = "application"
@@ -197,8 +186,5 @@ Window {
             }
         }
 
-    }
-    Component.onCompleted: {
-        SystemTray.setVisible();
     }
 }
