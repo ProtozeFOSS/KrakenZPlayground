@@ -1,34 +1,19 @@
 #include "krakenimageprovider.h"
-#include "krakenzdriver.h"
+#include "krakenz_driver.h"
 #include <QDebug>
 KrakenImageProvider::KrakenImageProvider(QObject *parent) : QObject(parent), QQuickImageProvider(QQuickImageProvider::Image),
-    mImageBuffer(320,320,QImage::Format_RGBA8888), mDisplaying(true)
+    mImageBuffer(320,320,QImage::Format_RGBA8888)
 {
 
 }
 
-void KrakenImageProvider::setKrakenDevice(KrakenZInterface *device)
-{
-    mDevice = device;
-}
 
 void KrakenImageProvider::imageChanged(QImage frame)
 {
     mImageBuffer = frame;
-    if(mDevice) {
-        mDevice->setImage(mImageBuffer, mDevice->bucket() ^ 1);
-    }
-    if(mDisplaying) {
-        emit imageReady();
-    }
+    emit imageReady();
 }
 
-void KrakenImageProvider::setDisplayVisible(bool visible){
-    mDisplaying = visible;
-    if(visible) {
-        emit imageReady();
-    }
-}
 
 
 QImage KrakenImageProvider::requestImage(const QString &id, QSize *size, const QSize &requested_size)

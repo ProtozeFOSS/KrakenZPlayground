@@ -1,5 +1,5 @@
-#ifndef APPCONTROLLER_H
-#define APPCONTROLLER_H
+#ifndef KRAKEN_APPCONTROLLER_H
+#define KRAKEN_APPCONTROLLER_H
 
 #include <QObject>
 #include <QSize>
@@ -35,7 +35,7 @@ protected:
     qint64 mElapsed;
 };
 
-class OffscreenAppController : public QObject
+class KrakenAppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickItem* container  NOTIFY containerChanged MEMBER mContainer)
@@ -52,8 +52,8 @@ class OffscreenAppController : public QObject
     Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
 
 public:
-    OffscreenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
-    ~OffscreenAppController();
+    KrakenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
+    ~KrakenAppController();
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
     AppMode mode() {return mMode; }
@@ -81,6 +81,7 @@ public:
     void setRedSize(int red_size);
     void setBlueSize(int blue_size);
     void setGreenSize(int green_size);
+    void setController(KrakenZInterface* controller){ mController = controller; }
     Q_INVOKABLE void setOrientationFromAngle(int angle);
     Q_INVOKABLE QString getLocalFolderPath(QString path);
     QString loadedPath() { return mLoadedPath; }
@@ -93,10 +94,11 @@ signals:
     void frameDelayChanged(int frame_delay);
     void screenSizeChanged(QSize size);
     void fpsChanged(int fps);
+    void initialized();
     void draw();
     void frameReady(QImage frame);
     void orientationChanged(Qt::ScreenOrientation orientation);
-    void modeChanged(OffscreenAppController::AppMode mode);
+    void modeChanged(KrakenAppController::AppMode mode);
     void loadGIFPrompt(QString file_path);
     void drawFPSChanged(bool draw_fps);
     void loadedPathChanged(QString path);
@@ -168,4 +170,4 @@ protected:
     void reconfigureSurfaceFormat();
 };
 
-#endif // APPCONTROLLER_H
+#endif // KRAKEN_APPCONTROLLER_H

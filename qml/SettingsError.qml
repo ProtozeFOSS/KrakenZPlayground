@@ -1,7 +1,15 @@
 import QtQuick 2.15
+import QtQuick.Window 2.15
 
-Rectangle{
-    id:missingTop
+Window {
+    id:window
+    width: 600
+    height:720
+    visible: true
+    minimumHeight: 720
+    minimumWidth:600
+    maximumHeight:720
+    maximumWidth: 600
     Rectangle {
 
         radius:8
@@ -10,10 +18,10 @@ Rectangle{
         color:"grey"
         Text{
             id:titleText
-            font.pixelSize: 32
+            font.pixelSize: 36
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text:"Settings File not found\n or it contained errors"
+            text:SettingsStatus.message
             anchors{
                 top:parent.top
                 horizontalCenter:parent.horizontalCenter
@@ -32,6 +40,7 @@ Rectangle{
             source: "qrc:/images/SADaf.png"
         }
         Text{
+            id:errorText
             anchors{
                 top:sadAF.bottom
                 left:parent.left
@@ -41,7 +50,20 @@ Rectangle{
             font.pixelSize: 24
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text:"Please check your file path \n and the profile name '" + SettingsManager.currentProfile() +  "' exists \n or check for errors syntax"
+            text:SettingsStatus.errorMessage
+        }
+        Text{
+            id:filePath
+            anchors{
+                top:errorText.bottom
+                horizontalCenter: parent.horizontalCenter
+                topMargin: 12
+            }
+            font.pixelSize: 13
+            font.bold: true
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text:SettingsStatus.filePath
         }
         Rectangle{
             id:closeButton

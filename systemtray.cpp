@@ -9,11 +9,12 @@
 #include <QJsonObject>
 
 SystemTray::SystemTray(QObject *parent)
-    : QObject{parent}, mMainEngine{nullptr}, mMainWindow{nullptr}, mTrayIcon{nullptr},
+    : QObject{parent}, mTrayIcon{nullptr},
       mMenu{nullptr}, mQuitAction{nullptr}, mAppBanner{nullptr}, mProfileMenu{nullptr}
 {
     // create the system tray icon
     mTrayIcon = new QSystemTrayIcon(this);
+    connect(mTrayIcon, &QSystemTrayIcon::activated, this, &SystemTray::activatedSystemTray);
     mMenu = new QMenu();
     mProfileMenu = new QMenu("Profile");
     mQuitAction = new QAction("Close", mMenu);
@@ -42,11 +43,8 @@ SystemTray::SystemTray(QObject *parent)
 void SystemTray::activatedSystemTray(QSystemTrayIcon::ActivationReason reason)
 {
     switch (reason) {
-        case QSystemTrayIcon::Trigger:
-            showMainWindow();
-            break;
         case QSystemTrayIcon::DoubleClick: {
-            showMainWindow();
+            emit showMainWindow();
             break;
         }
         case QSystemTrayIcon::MiddleClick:
@@ -56,21 +54,6 @@ void SystemTray::activatedSystemTray(QSystemTrayIcon::ActivationReason reason)
     }
 }
 
-
-void SystemTray::preventCloseAppWithWindow()
-{
-    auto app = qobject_cast<QApplication*>(parent());
-    if(app){
-        app->setQuitOnLastWindowClosed(false);
-    }
-}
-
-void SystemTray::setEngine(QQmlApplicationEngine *engine)
-{
-    if(!mMainEngine){
-        mMainEngine = engine;
-    }
-}
 
 void SystemTray::handleProfileSelect(bool checked)
 {
@@ -117,14 +100,6 @@ void SystemTray::setJsonProfiles(QJsonArray profiles, QString current)
     }
 }
 
-void SystemTray::setMainWindow(QQuickWindow *window)
-{
-    if(!mMainWindow){
-        mMainWindow = window;
-        connect(mTrayIcon, &QSystemTrayIcon::activated, this, &SystemTray::activatedSystemTray);
-    }
-}
-
 void SystemTray::setIcon(QIcon icon)
 {
     mTrayIcon->setIcon(icon);
@@ -134,17 +109,6 @@ void SystemTray::setIcon(QIcon icon)
 void SystemTray::setVisible(bool visible)
 {
     mTrayIcon->setVisible(visible);
-}
-
-
-void SystemTray::showMainWindow()
-{
-    mMainWindow->showNormal();
-    mMainWindow->raise();  // for MacOS
-    mMainWindow->setVisible(true);
-#ifdef Q_OS_WIN
-    mMainWindow->setWindowState(Qt::WindowState::WindowActive);
-#endif
 }
 
 SystemTray::~SystemTray()

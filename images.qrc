@@ -1,15 +1,12 @@
 <RCC>
     <qresource prefix="/">
-        <file>images/kraken_avatar.png</file>
-        <file>images/NanCat.gif</file>
-        <file>images/Outer Ring.png</file>
         <file>images/pause.svg</file>
         <file>images/play.svg</file>
         <file>images/Droplet.png</file>
-        <file>images/cat.png</file>
         <file>images/SADaf.png</file>
         <file>images/Icon_no_permission.png</file>
         <file>images/Peyton.png</file>
         <file>images/Outer Ring and Hose.png</file>
+        <file>images/not-found.png</file>
     </qresource>
 </RCC>

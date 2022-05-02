@@ -1,4 +1,4 @@
-#include "offscreen_appcontroller.h"
+#include "kraken_appcontroller.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLShaderProgram>
@@ -17,9 +17,9 @@
 #include <QTimer>
 #include <QQuickItem>
 #include <QString>
-#include "krakenzdriver.h"
+#include "krakenz_driver.h"
 
-OffscreenAppController::OffscreenAppController(KrakenZInterface *controller, QObject *parent)
+KrakenAppController::KrakenAppController(KrakenZInterface *controller, QObject *parent)
     : QObject(parent), mController(controller), mContainer(nullptr), mCurrentApp(nullptr), mCurrentComponent(nullptr), mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
@@ -30,10 +30,10 @@ OffscreenAppController::OffscreenAppController(KrakenZInterface *controller, QOb
     mStatusTimer->setInterval(400);
     mStatusTimer->setSingleShot(false);
     connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZInterface::sendStatusRequest);
-    connect(mDelayTimer, &QTimer::timeout, this, &OffscreenAppController::renderNext);
+    connect(mDelayTimer, &QTimer::timeout, this, &KrakenAppController::renderNext);
 }
 
-void OffscreenAppController::adjustAnimationDriver()
+void KrakenAppController::adjustAnimationDriver()
 {
     mDelayTimer->setSingleShot(true);
     mDelayTimer->setTimerType(Qt::PreciseTimer);
@@ -41,13 +41,13 @@ void OffscreenAppController::adjustAnimationDriver()
 }
 
 
-void OffscreenAppController::closeQmlApplications()
+void KrakenAppController::closeQmlApplications()
 {
     releaseApplication();
     releaseAppEngine();
 }
 
-void OffscreenAppController::createApplication()
+void KrakenAppController::createApplication()
 {
     auto items = mContainer->childItems();
     if(items.size()) {
@@ -64,7 +64,7 @@ void OffscreenAppController::createApplication()
     renderNext();
 }
 
-void OffscreenAppController::createContainer()
+void KrakenAppController::createContainer()
 {
     if(!mContainerComponent) {
         mContainerComponent = new QQmlComponent(mAppEngine, QUrl("qrc:/qml/KrakenZContainer.qml"));
@@ -83,13 +83,13 @@ void OffscreenAppController::createContainer()
                 mContainerComponent = nullptr;
                 // handleContainerError();
             }else {
-                connect(mContainerComponent, &QQmlComponent::statusChanged, this, &OffscreenAppController::containerComponentReady);
+                connect(mContainerComponent, &QQmlComponent::statusChanged, this, &KrakenAppController::containerComponentReady);
             }
         }
     }
 }
 
-void OffscreenAppController::initialize()
+void KrakenAppController::initialize()
 {
     if(!mInitialized) {
         mInitialized = true;
@@ -100,10 +100,19 @@ void OffscreenAppController::initialize()
     }
 }
 
-void OffscreenAppController::containerComponentReady()
+void KrakenAppController::containerComponentReady()
 {
     if(mContainerComponent->isReady()){
-        qDebug() << "Container component ready";
+        qDebug() << "Container component ready";        
+        auto screen = mOffscreenWindow->screen();
+        if(screen) {
+            mAppEngine->rootContext()->setContextProperty("KrakenScreen", screen);
+        }
+        if(mPrimaryScreen){
+            mAppEngine->rootContext()->setContextProperty("PrimaryScreen", mPrimaryScreen);
+        }
+        mAppEngine->rootContext()->setContextProperty("AppController", this);
+        mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
         mContainer = qobject_cast<QQuickItem*>(mContainerComponent->create());
         auto errors = mContainerComponent->errors();
         if(errors.size()){
@@ -113,6 +122,7 @@ void OffscreenAppController::containerComponentReady()
             return;
         }
         mContainer->setParentItem(mOffscreenWindow->contentItem());
+        emit initialized();
     }else {
         qDebug() << "Component failed" << mContainerComponent->errorString();
         emit qmlFailed(mContainerComponent->errorString());
@@ -120,7 +130,7 @@ void OffscreenAppController::containerComponentReady()
     }
 }
 
-QString OffscreenAppController::getLocalFolderPath(QString path)
+QString KrakenAppController::getLocalFolderPath(QString path)
 {
     QString out_str;
     if(!path.startsWith(QStringLiteral("file:/"))) {
@@ -136,7 +146,7 @@ QString OffscreenAppController::getLocalFolderPath(QString path)
     return out_str;
 }
 
-void OffscreenAppController::handleComponentErrors()
+void KrakenAppController::handleComponentErrors()
 {
     auto errors = mCurrentComponent->errors();
     for(const auto& error: qAsConst(errors)){
@@ -149,13 +159,13 @@ void OffscreenAppController::handleComponentErrors()
     resetAppEngine();
 }
 
-void OffscreenAppController::initializeOffScreenWindow()
+void KrakenAppController::initializeOffScreenWindow()
 {
     releaseApplication();
     resetAppEngine();
 }
 
-void OffscreenAppController::loadImage(QString file_path)
+void KrakenAppController::loadImage(QString file_path)
 {
     mDelayTimer->stop();
     mActive = false;
@@ -169,7 +179,7 @@ void OffscreenAppController::loadImage(QString file_path)
     renderNext();
 }
 
-void OffscreenAppController::userComponentReady()
+void KrakenAppController::userComponentReady()
 {
     // change to swtich on status
     if(mCurrentComponent->isReady()){
@@ -189,7 +199,7 @@ void OffscreenAppController::userComponentReady()
     }
 }
 
-void OffscreenAppController::reconfigureSurfaceFormat()
+void KrakenAppController::reconfigureSurfaceFormat()
 {
     // Gaurd statement
     if(!mInitialized)
@@ -244,7 +254,7 @@ void OffscreenAppController::reconfigureSurfaceFormat()
     }
 }
 
-void OffscreenAppController::releaseAppEngine()
+void KrakenAppController::releaseAppEngine()
 {
     if(mAppEngine) {
         delete mAppEngine;
@@ -252,7 +262,7 @@ void OffscreenAppController::releaseAppEngine()
     }
 }
 
-void OffscreenAppController::releaseApplication(bool deleteComponent)
+void KrakenAppController::releaseApplication(bool deleteComponent)
 {
     if(mCurrentApp) {
         mDelayTimer->stop();
@@ -270,7 +280,7 @@ void OffscreenAppController::releaseApplication(bool deleteComponent)
 
 
 
-void OffscreenAppController::renderNext()
+void KrakenAppController::renderNext()
 {
     mRenderControl->polishItems();
     mRenderControl->sync();
@@ -282,7 +292,7 @@ void OffscreenAppController::renderNext()
     QCoreApplication::postEvent(this, updateRequest);
 }
 
-void OffscreenAppController::resetAppEngine()
+void KrakenAppController::resetAppEngine()
 {
     if(mAppEngine) {
         mAppEngine->clearComponentCache();
@@ -306,7 +316,7 @@ void OffscreenAppController::resetAppEngine()
     createContainer();
 }
 
-void OffscreenAppController::setAnimationPlaying(bool playing)
+void KrakenAppController::setAnimationPlaying(bool playing)
 {
     if(mPlaying != playing) {
         mPlaying = playing;
@@ -314,7 +324,7 @@ void OffscreenAppController::setAnimationPlaying(bool playing)
     }
 }
 
-void OffscreenAppController::setDrawFPS(bool draw_fps)
+void KrakenAppController::setDrawFPS(bool draw_fps)
 {
     if(mDrawFPS != draw_fps) {
         mDrawFPS = draw_fps;
@@ -322,22 +332,26 @@ void OffscreenAppController::setDrawFPS(bool draw_fps)
     }
 }
 
-void OffscreenAppController::setMode(AppMode mode)
+void KrakenAppController::setMode(AppMode mode)
 {
     mMode = mode;
     if(mMode <= AppMode::STATIC_IMAGE) {
         releaseApplication();
-        mController->setMonitorFPS(false);
+        if(mController){
+            mController->setMonitorFPS(false);
+        }
         mStatusTimer->start();
     }else {
-        mController->setMonitorFPS();
+        if(mController){
+            mController->setMonitorFPS();
+        }
         mStatusTimer->stop();
     }
     emit modeChanged(mode);
 
 }
 
-void OffscreenAppController::setPrimaryScreen(QScreen *screen)
+void KrakenAppController::setPrimaryScreen(QScreen *screen)
 {
     if(mPrimaryScreen != screen) {
         mPrimaryScreen = screen;
@@ -347,7 +361,7 @@ void OffscreenAppController::setPrimaryScreen(QScreen *screen)
     }
 }
 
-void OffscreenAppController::setScreenSize(QSize screen_size)
+void KrakenAppController::setScreenSize(QSize screen_size)
 {
     if(screen_size.width() != mSize.width() || screen_size.height() != mSize.height()) {
         mSize = screen_size;
@@ -355,7 +369,7 @@ void OffscreenAppController::setScreenSize(QSize screen_size)
     }
 }
 
-void OffscreenAppController::setBuiltIn(bool loadingGif)
+void KrakenAppController::setBuiltIn(bool loadingGif)
 {
     mLoadedPath = loadingGif ?  "1":"2";
     mDelayTimer->stop();
@@ -363,7 +377,7 @@ void OffscreenAppController::setBuiltIn(bool loadingGif)
     mActive = false;
 }
 
-void OffscreenAppController::setAlphaSize(int alpha_size)
+void KrakenAppController::setAlphaSize(int alpha_size)
 {
     if(alpha_size != mAlphaSize) {
         mAlphaSize = alpha_size;
@@ -372,7 +386,7 @@ void OffscreenAppController::setAlphaSize(int alpha_size)
 }
 
 
-void OffscreenAppController::setOrientation(Qt::ScreenOrientation orientation, bool updateController)
+void KrakenAppController::setOrientation(Qt::ScreenOrientation orientation, bool updateController)
 {
     if(mOrientation != orientation) {
         mOrientation = orientation;
@@ -382,7 +396,7 @@ void OffscreenAppController::setOrientation(Qt::ScreenOrientation orientation, b
     }
 }
 
-void OffscreenAppController::setOrientationFromAngle(int angle)
+void KrakenAppController::setOrientationFromAngle(int angle)
 {
     mController->setProperty("rotationOffset", angle);
     if(angle >= 90 && angle < 180) {
@@ -399,12 +413,14 @@ void OffscreenAppController::setOrientationFromAngle(int angle)
     }
 }
 
-bool OffscreenAppController::event(QEvent *event)
+bool KrakenAppController::event(QEvent *event)
 {
     if(event->type() == QEvent::UpdateRequest)
     {
         if(mActive) {
-            mController->sendStatusRequest();
+            if(mController){
+                mController->sendStatusRequest();
+            }
             emit draw();
             mDelayTimer->start();
         }
@@ -414,7 +430,7 @@ bool OffscreenAppController::event(QEvent *event)
     return QObject::event(event);
 }
 
-void OffscreenAppController::setRedSize(int red_size)
+void KrakenAppController::setRedSize(int red_size)
 {
     if(red_size != mRedSize) {
         mRedSize = red_size;
@@ -422,7 +438,7 @@ void OffscreenAppController::setRedSize(int red_size)
     }
 }
 
-void OffscreenAppController::setGreenSize(int green_size)
+void KrakenAppController::setGreenSize(int green_size)
 {
     if(green_size != mGreenSize) {
         mGreenSize = green_size;
@@ -430,7 +446,7 @@ void OffscreenAppController::setGreenSize(int green_size)
     }
 }
 
-void OffscreenAppController::setBlueSize(int blue_size)
+void KrakenAppController::setBlueSize(int blue_size)
 {
     if(blue_size != mBlueSize) {
         mBlueSize = blue_size;
@@ -439,7 +455,7 @@ void OffscreenAppController::setBlueSize(int blue_size)
 }
 
 
-void OffscreenAppController::setDepthSize(int depth_size)
+void KrakenAppController::setDepthSize(int depth_size)
 {
     if(depth_size != mDepthSize) {
         mDepthSize = depth_size;
@@ -447,7 +463,7 @@ void OffscreenAppController::setDepthSize(int depth_size)
     }
 }
 
-void OffscreenAppController::setStencilSize(int stencil_size)
+void KrakenAppController::setStencilSize(int stencil_size)
 {
     if(stencil_size != mStencilSize) {
         mStencilSize = stencil_size;
@@ -455,7 +471,7 @@ void OffscreenAppController::setStencilSize(int stencil_size)
     }
 }
 
-void OffscreenAppController::setFrameDelay(int frame_delay)
+void KrakenAppController::setFrameDelay(int frame_delay)
 {
     if(frame_delay != mFrameDelay) {
         mFrameDelay = frame_delay;
@@ -464,7 +480,7 @@ void OffscreenAppController::setFrameDelay(int frame_delay)
     }
 }
 
-void OffscreenAppController::setJsonProfile(QJsonObject profile)
+void KrakenAppController::setJsonProfile(QJsonObject profile)
 {
     auto loadedPath = profile.value("loadedPath").toString();
     int mode = profile.value("mode").toInt(-2);
@@ -503,7 +519,7 @@ void OffscreenAppController::setJsonProfile(QJsonObject profile)
     }
 }
 
-QJsonObject OffscreenAppController::toJsonProfile()
+QJsonObject KrakenAppController::toJsonProfile()
 {
     QJsonObject profile;
     profile.insert("mode", mMode);
@@ -518,11 +534,10 @@ QJsonObject OffscreenAppController::toJsonProfile()
     return profile;
 }
 
-bool OffscreenAppController::loadQmlFile(QString path)
+bool KrakenAppController::loadQmlFile(QString path)
 {
     bool loaded(false);
     releaseApplication();
-    mAppEngine->clearComponentCache();
     mLoadedPath = path;
     mCurrentComponent = new QQmlComponent(mAppEngine, QUrl(path));
     if(mCurrentComponent->isReady()){
@@ -537,14 +552,14 @@ bool OffscreenAppController::loadQmlFile(QString path)
         if(mCurrentComponent->isError()){
             handleComponentErrors();
         }else {
-            connect(mCurrentComponent, &QQmlComponent::statusChanged, this, &OffscreenAppController::userComponentReady);
+            connect(mCurrentComponent, &QQmlComponent::statusChanged, this, &KrakenAppController::userComponentReady);
         }
     }
     return loaded;
 }
 
 
-OffscreenAppController::~OffscreenAppController()
+KrakenAppController::~KrakenAppController()
 {
     mDelayTimer->stop();
     delete mDelayTimer;

@@ -1,9 +1,10 @@
-#ifndef SETTINGSMANAGER_H
-#define SETTINGSMANAGER_H
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 #include <QObject>
 #include <QJsonObject>
 #include <QJsonArray>
+
 /*****************************************************************************
  *  Settings Manager performs CRUD for profiles, and CRUR for the
  *  settings file (replace not delete)
@@ -21,23 +22,19 @@
  * for handfuls (<10).
  *
  ************************************************************/
-class SettingsManager : public QObject
+class Settings
 {
-    Q_OBJECT
-    Q_PROPERTY(bool acceptedAgreement READ agreed CONSTANT)
-    Q_PROPERTY(bool errored READ errored NOTIFY settingsErrored MEMBER mSettingsErrored)
 public:
-    explicit SettingsManager(QString directory,QString profile = QStringLiteral("Default"), QObject *parent = nullptr);
-    bool agreed(){return loadSettings();}
-    bool errored(){ return mSettingsErrored; }
-    QJsonArray profiles();
-    Q_INVOKABLE QString currentProfile() { return mProfileName;}
+
+    static QJsonObject loadSettings(QString directory, QString& profileName, int& state, bool userDirectory);
+    static QJsonObject defaultProfileObject();
+    static QJsonObject defaultSettingsObject();
+    static void writeSettingsFile(QString directory, QJsonObject settings);
 
 public slots:
     void addProfile(QString name);
     void applyStartupProfile();
     void selectProfile(QString name);
-    void createDefaultSettings();
     void removeProfile(QString name);
     void writeSettingsOnExit(QJsonObject current_settings);
 
@@ -50,16 +47,8 @@ signals:
 
     // on updates/changes save profile.
 protected:
-    QString mFilePath;
-    QString mProfileName;
-    bool    mSettingsErrored;
-    QJsonObject mSettingsObject;
+    Settings(){};
 
-    //void openSettings();
-    void writeCurrentSettings();
-    QJsonObject defaultProfileObject();
-    QJsonObject defaultSettingsObject();
-    bool loadSettings();
 };
 
-#endif // SETTINGSMANAGER_H
+#endif // SETTINGS_H

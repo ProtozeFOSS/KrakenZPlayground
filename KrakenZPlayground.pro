@@ -9,12 +9,14 @@ CONFIG += c++17
 #DEFINES += ENABLE_LOGGING
 
 SOURCES += \
-        offscreen_appcontroller.cpp \
+        kraken_appcontroller.cpp \
+        krakenz_driver.cpp \
+        krakenz_interface.cpp \
+        krakenz_software.cpp \
+        kzp_controller.cpp \
         krakenimageprovider.cpp \
-        krakenzdriver.cpp \
         main.cpp \
-        onscreen_appcontroller.cpp \
-        settingsmanager.cpp \
+        settings.cpp \
         systemtray.cpp
 
 RESOURCES += qml.qrc \
@@ -34,11 +36,14 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    offscreen_appcontroller.h \
+    kraken_appcontroller.h \
+    krakenz_driver.h \
+    krakenz_interface.h \
+    krakenz_software.h \
+    kzp_controller.h \
     krakenimageprovider.h \
-    krakenzdriver.h \
-    onscreen_appcontroller.h \
-    settingsmanager.h \
+    kzp_keys.h \
+    settings.h \
     systemtray.h
 
 DISTFILES += \

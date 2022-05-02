@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import com.kzp.screens 1.0
+import com.application.kzp 1.0
 Rectangle {
     id: background
     color:"black"

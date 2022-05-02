@@ -1,15 +1,9 @@
-#ifndef KRAKENZDRIVER_H
-#define KRAKENZDRIVER_H
+#ifndef KRAKENZ_INTERFACE_H
+#define KRAKENZ_INTERFACE_H
 
 #include <QObject>
 #include <QJsonObject>
 #include <QImage>
-#include <QQuickItem>
-#include <QSharedPointer>
-#include <QTimer>
-#include "qusbendpoint.h"
-#include <QJsonObject>
-#include <QApplication>
 
 
 struct  TempPoint{
@@ -17,8 +11,14 @@ struct  TempPoint{
     quint8  point;
     TempPoint(quint8 temp, quint8 point) : temp(temp), point(point){}
     TempPoint(const TempPoint& rhs) : temp(rhs.temp), point(rhs.point){}
-    TempPoint& operator=(const TempPoint&)= default;
+    TempPoint& operator=(const TempPoint& rhs)
+    {
+        temp = rhs.temp;
+        point = rhs.point;
+        return *this;
+    };
 };
+
 
 class KrakenZInterface : public QObject{
     Q_OBJECT
@@ -110,6 +110,7 @@ public:
     virtual int     rotationOffset() { return 0; }
     virtual qreal fps() { return 0; }
     virtual bool found() { return false; }
+    virtual bool initialize(bool&){ return false;}
     virtual bool initialized() { return false; }
     virtual bool monitorFPS() { return false; }
     virtual QJsonObject toJsonProfile(){ return QJsonObject(); }
@@ -127,13 +128,11 @@ signals:
     void versionChanged(QString);
     void deviceReady();
     void rotationOffsetChanged(int);
-    void error(QJsonObject);
     void bucketChanged(quint8);
     void monitorFPSChanged(bool);
 
 public slots:
     virtual void blankScreen(){}
-    virtual void initialize(){}
     virtual void startMonitoringFramerate(){}
     virtual void stopMonitoringFramerate(){}
     virtual void setBrightness(quint8){}
@@ -172,123 +171,14 @@ protected:
     virtual void sendBulkDataInfo(quint8, quint32){}
 };
 
-class QQuickItemGrabResult;
+Q_DECLARE_INTERFACE(KrakenZInterface, "com.application.kzp")
 
-class QUsbDevice;
-const int IMAGE_FRAME_SIZE = 409600;
-
-class KrakenZDriver : public KrakenZInterface
-{
-    Q_OBJECT
-public:
-    explicit KrakenZDriver(QObject *parent = nullptr, quint16 VID = 0x1e71, quint16 PID = 0x3008);
-    static quint16 calculateMemoryStart(quint8 index);
-    qreal liquidTemperature() override { return mLiquidTemp; }
-    quint16 pumpSpeed() override { return mPumpSpeed; }
-    quint16 fanSpeed() override { return mFanSpeed; }
-    quint8 pumpDuty() override { return mPumpDuty; }
-    quint8 fanDuty() override { return mFanDuty; }
-    quint8 brightness() override { return mBrightness; }
-    QString version() override { return mVersion; }
-    QString fwInfo() override { return mFwInfo; }
-    short bucket() override { return mImageIndex; }
-    int     rotationOffset() override { return mRotationOffset; }
-    qreal fps() override { return mFPS; }
-    bool found() override { return mFound; }
-    bool initialized() override { return mInitialized; }
-    bool monitorFPS() override { return mMeasure.isActive(); }
-    Q_INVOKABLE void closeConnections();
-    QJsonObject toJsonProfile() override;
-    ~KrakenZDriver();
-
-
-public slots:
-    void blankScreen() override;
-    void initialize() override;
-    void startMonitoringFramerate() override;
-    void stopMonitoringFramerate() override;
-    void setBrightness(quint8 brightness) override;
-    void setFanDuty(quint8 duty) override;
-    void setPumpDuty(quint8 duty) override; // flat
-    void setImage(QImage image, quint8 index = 0, bool applyAfterSet = true) override;
-    void setJsonProfile(QJsonObject profile) override;
-    void setRotationOffset(int offset) override;
-    void sendStatusRequest() override;
-    void sendHex(QString hex_data, bool pad = true) override;
-    void moveToBucket( int bucket = 0) override;
-    void setNZXTMonitor() override;
-    void setBuiltIn(quint8 index) override;
-    void setScreenOrientation(Qt::ScreenOrientation orientation) override;
-    void setMonitorFPS(bool monitor = true) override;
-    void sendFWRequest() override;
-
-protected slots:
-    void receivedControlResponse();
-    void updateFrameRate();
-
-protected:
-    void parseFWVersion(QByteArray& data) override;
-    void parseStatus(QByteArray& data) override;
-    void parseDeleteBucket(QByteArray& data) override;
-
-    // Control messages
-    void sendBrightness(quint8 brightness) override;
-    void sendQueryBucket(quint8 index, quint8 asset = 0) override;
-    void sendDeleteBucket(quint8 index) override;
-    void sendSwitchBucket(quint8 index, quint8 mode = 4) override;
-    void sendSwitchLiquidTempMode() override;
-    void sendSetupBucket(quint8 index, quint8 id, quint16 memory_slot, quint16 memory_slot_count) override;
-    void sendWriteStartBucket(quint8 index) override;
-    void sendWriteFinishBucket(quint8 index) override;
-
-    // Bulk Transfer CTRL Message
-    void sendBulkDataInfo(quint8 mode = 2, quint32 size = 3276800) override;
-
-    bool           mFound;
-    bool           mInitialized;
-    QUsbDevice*    mKrakenDevice; // Single composite usb device handle
-    QUsbEndpoint*  mLCDDATA;
-    QUsbEndpoint*  mLCDCTL;
-    QUsbEndpoint*  mLCDIN;
-
-    // Pump/Fan Qml Properties
-    qreal   mLiquidTemp;
-    quint16 mFanSpeed;
-    quint16 mPumpSpeed;
-    quint8  mFanDuty;
-    quint8  mPumpDuty;
-    QString mVersion;
-    QString mFwInfo;
-    quint8  mBrightness;
-    int     mRotationOffset; // lcd rotation offset
-
-    // Write Buffer
-    QString             mFilePath;
-    QSharedPointer<QQuickItemGrabResult> mResult;
-    short               mBufferIndex; // buffer index
-    short               mImageIndex; // bucket id
-    QTimer              mMeasure;
-    qint64              mBytesLeft;
-    quint64             mBytesSent;
-    char                mFrameOut[IMAGE_FRAME_SIZE];
-    QImage              mImageOut;
-    bool                mApplyAfterSet;
-    bool                mWritingImage;
-    short               mFrames;
-    quint32             mFrameDelay;
-    qreal               mFPS;
-
-};
 
 static KrakenZInterface*  CURRENT_KRAKENZ_DRIVER = nullptr;
 static KrakenZInterface*  HARDWARE_DRIVER = nullptr;
 static KrakenZInterface*  SOFTWARE_DRIVER = nullptr;
-
-class KrakenZSoftware: public KrakenZInterface {
-    Q_OBJECT
-public:
-    KrakenZSoftware(QObject* parent = nullptr) : KrakenZInterface(parent){};
-};
+class KrakenZDriver;
+class KrakenZSoftware;
 
 class KrakenZDriverSelect: public QObject{
 
@@ -299,18 +189,9 @@ public:
         HARDWARE=1
     };
     Q_ENUM(DriverType)
-    KrakenZDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type = DriverType::HARDWARE) : QObject{app}, mApp{app}
-    {
-        selectDriver(type);
-    }
+    KrakenZDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type = DriverType::HARDWARE);
     KrakenZInterface* currentDriver() { return CURRENT_KRAKENZ_DRIVER; }
-    void setCurrentDriver(KrakenZInterface* driver) // C++ only
-    {
-        if(driver != CURRENT_KRAKENZ_DRIVER){
-            CURRENT_KRAKENZ_DRIVER = driver;
-            emit driverChanged(driver);
-        }
-    }
+    DriverType driverType() { return mDriverType; }
 protected:
 
     void releaseSoftwareDriver()
@@ -329,28 +210,23 @@ public:
         releaseSoftwareDriver();
         releaseHardwareDriver();
     }
-    Q_INVOKABLE void selectDriver(KrakenZDriverSelect::DriverType type)
-    {
-        if(type == DriverType::SOFTWARE){
-            if(!SOFTWARE_DRIVER){
-                SOFTWARE_DRIVER = new KrakenZSoftware{mApp};
-            }
-            releaseHardwareDriver();
-            setCurrentDriver(SOFTWARE_DRIVER);
-        } else {
-            if(!HARDWARE_DRIVER){
-                HARDWARE_DRIVER = new KrakenZDriver{mApp};
-            }
-            releaseSoftwareDriver();
-            setCurrentDriver(HARDWARE_DRIVER);
-        }
-    }
+    Q_INVOKABLE void selectDriver(KrakenZDriverSelect::DriverType type);
 
 signals:
     void driverChanged(QObject* driver);
 
 protected:
+
+    void setCurrentDriver(KrakenZInterface* driver) // C++ only
+    {
+        if(driver != CURRENT_KRAKENZ_DRIVER){
+            CURRENT_KRAKENZ_DRIVER = driver;
+            emit driverChanged(driver);
+        }
+    }
+
     QApplication*    mApp;
+    DriverType       mDriverType;
 };
 
-#endif // KRAKENZDRIVER_H
+#endif // KRAKENZ_INTERFACE_H

@@ -1,4 +1,4 @@
-#include "krakenzdriver.h"
+#include "krakenz_driver.h"
 #include "qusb.h"
 #include "qusbdevice.h"
 #include <QImage>
@@ -26,13 +26,6 @@ constexpr char ID_VALID[] = "VALID";
 constexpr char ID_RECV[] = "RECEIVED";
 constexpr char ID_MEMORY_START[] = "MEMORY_START";
 constexpr char ID_MEMORY_SLOTS[] = "MEMORY_SLOTS";
-
-
-#ifdef Q_OS_LINUX
-constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device \n Check if another process has control of the Kraken Z and UDEV rules are setup correctly";
-#else
-constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device \n Check if another process (NZXT CAM) is open and has control of the Kraken Z";
-#endif
 
 constexpr quint8 CRITICAL_TEMP = 59;
 
@@ -93,9 +86,9 @@ void KrakenZDriver::closeConnections()
     }
 }
 
-void KrakenZDriver::initialize()
+bool KrakenZDriver::initialize(bool& permissionDenied)
 {
-    bool errored(true);
+    bool success(false);
     if(mFound && !mInitialized){
         mMeasure.setInterval(1000);
         mMeasure.setSingleShot(false);
@@ -106,7 +99,8 @@ void KrakenZDriver::initialize()
             mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 0x02);
             if(!mLCDDATA->open(QIODevice::WriteOnly)){
                 qDebug() << "Error opening Bulk write endpoint: " <<  mLCDDATA->errorString();
-                qDebug() << mKrakenDevice->id() << mKrakenDevice->config();                                  
+                qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
+
             }else { // continue if successfully opened the bulk write
                 mLCDCTL = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 0x01); // Write
                 mLCDIN = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::interruptEndpoint, 0x81); // Read
@@ -116,27 +110,24 @@ void KrakenZDriver::initialize()
                     qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
                 } else { // continue if sccuessfully opened device
                     sendStatusRequest();
-                    QTimer::singleShot(1000, this, &KrakenZDriver::sendFWRequest);
+                    QTimer::singleShot(600, this, &KrakenZDriver::sendFWRequest);
                     mInitialized = true;
-                    memset(mFrameOut,0,IMAGE_FRAME_SIZE);
-                    errored = false;
+                    success = true;
                 }
             }
         }
     }
-    if(errored) {
-        QJsonObject error_obj;
+    if(!success) {
         if(!mLCDDATA){
             qDebug() << "Failed to open raw usb Kraken device:";
             qDebug() << mKrakenDevice->statusString();
             qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
         }
-        error_obj.insert(ID_MESSAGE, OPEN_DENIED_STR);
-        emit error(error_obj);
+        permissionDenied = true;
     } else {
-        QTimer::singleShot(600, this, &KrakenZDriver::deviceReady);
+        QTimer::singleShot(100, this, &KrakenZDriver::deviceReady);
     }
-
+    return success;
 }
 void KrakenZDriver::moveToBucket(int bucket)
 {
