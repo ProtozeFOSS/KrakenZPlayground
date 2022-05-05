@@ -3,8 +3,8 @@
 #include <QQmlApplicationEngine>
 #include <QApplication>
 #include <QQmlContext>
-#include "krakenimageprovider.h"
-#include "systemtray.h"
+#include "preview_provider.h"
+#include "system_tray.h"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QStandardPaths>
@@ -34,9 +34,9 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 
 KZPController::KZPController(QApplication *parent)
     : QObject{parent}, mAppliedSettings{false}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
-      mDriverSelect{parent, KrakenZDriverSelect::HARDWARE},  mController{nullptr},
-      mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr}
+       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr}
 {
+    KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::SOFTWARE);
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
     if(parent){
         QPixmap iconPixmap(":/images/Droplet.png");
@@ -164,7 +164,10 @@ bool KZPController::createDeviceController()
 {
     bool success{true};
     if(!mController) {
-        mController = mDriverSelect.currentDriver();
+        auto driverSelect{KrakenZDriverSelect::GetInstance()};
+        if(driverSelect){
+            mController = driverSelect->currentDriver();
+        }
         if(!mController){
             qDebug() << "Failed to create device Controller";
             QCoreApplication::exit(-1);
@@ -200,9 +203,14 @@ bool KZPController::createDeviceController()
 bool KZPController::setSoftwareController()
 {
     auto previousController{mController};
-    mController->disconnect();
-    mDriverSelect.selectDriver(KrakenZDriverSelect::SOFTWARE);
-    mController = mDriverSelect.currentDriver();
+    if(mController) {
+        mController->disconnect();
+    }
+    auto driverSelect{KrakenZDriverSelect::GetInstance()};
+    if(driverSelect) {
+        driverSelect->selectDriver(KrakenZDriverSelect::SOFTWARE);
+        mController = driverSelect->currentDriver();
+    }
     if(mKrakenAppController){
         mKrakenAppController->setController(mController);
     }
@@ -259,6 +267,7 @@ bool KZPController::createKrakenApplicationController()
         connect(mKrakenAppController, &KrakenAppController::orientationChanged,
                          mController,  &KrakenZInterface::setScreenOrientation);
         connect(mKrakenAppController, &KrakenAppController::frameReady, this, &KZPController::processBackgroundFrame);
+        connect(mKrakenAppController, &KrakenAppController::previewDetached, this, &KZPController::previewDetached);
         // setup the image provider
         success = true;
     }else {
@@ -268,6 +277,28 @@ bool KZPController::createKrakenApplicationController()
     return success;
 }
 
+void KZPController::previewDetached(bool detached)
+{
+    // in foreground - if the main winodw closes,  and detached move to detached
+    // in detached - if changes to not detached, move to foreground mode
+    // in background - if detached becomes true, move to detached, else ignore.
+    // in detached - if preview window closed, move to background
+    switch(mState) {
+        case ApplicationState::FOREGROUND:{
+            if(detached) {
+                // create a new root object that is detached preview
+            } else {
+                // destroy that root object that is the detached preview
+            }
+            break;
+        }
+        case ApplicationState::BACKGROUND: {
+            break;
+        }
+        // Add new state Detached
+        default:;
+    }
+}
 
 void KZPController::processBackgroundFrame(QImage frame)
 {
@@ -325,12 +356,12 @@ void KZPController::setMainWindow()
         case ApplicationState::FOREGROUND: {
             initializeMainWindow();
             qmlFile = KRAKEN_Z;
-            auto previewProvider {new KrakenImageProvider()}; // uses preview
+            auto previewProvider {new ProxyImageProvider()}; // uses preview
             mUxEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
             mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
             mUxEngine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
             mUxEngine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
-            QObject::connect(mKrakenAppController, &KrakenAppController::frameReady, previewProvider, &KrakenImageProvider::imageChanged);
+            QObject::connect(mKrakenAppController, &KrakenAppController::frameReady, previewProvider, &ProxyImageProvider::imageChanged);
             mUxEngine->rootContext()->setContextProperty("ApplicationData", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
             if(!mSystemTray){
                 createSystemTray();
@@ -450,7 +481,6 @@ void KZPController::cleanUp()
     delete mKrakenAppController;
     mKrakenAppController = nullptr;
     releaseMainWindow();
-    mDriverSelect.releaseDrivers();
     delete mUxEngine;
     mUxEngine = nullptr;
     delete mSystemTray;

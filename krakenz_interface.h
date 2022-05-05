@@ -29,12 +29,11 @@ class KrakenZInterface : public QObject{
     Q_PROPERTY( quint8 pumpDuty READ pumpDuty WRITE setPumpDuty NOTIFY pumpDutyChanged)
     Q_PROPERTY( quint8 fanDuty READ fanDuty WRITE setFanDuty NOTIFY fanDutyChanged)
     Q_PROPERTY( QString version READ version NOTIFY versionChanged)
-    Q_PROPERTY( QString fwInfo READ fwInfo NOTIFY fwInfoChanged)
     Q_PROPERTY( int rotationOffset READ rotationOffset WRITE setRotationOffset NOTIFY rotationOffsetChanged)
     Q_PROPERTY( qreal fps READ fps  NOTIFY fpsChanged)
     Q_PROPERTY( quint8 brightness READ brightness WRITE setBrightness NOTIFY brightnessChanged)
     Q_PROPERTY( short bucket READ bucket NOTIFY bucketChanged)
-    Q_PROPERTY( bool monitorFPS READ monitorFPS WRITE setMonitorFPS NOTIFY monitorFPSChanged)
+    Q_PROPERTY( bool isSoftware READ isSoftware CONSTANT)
 
 public:
     KrakenZInterface(QObject* parent = nullptr) : QObject(parent){}
@@ -105,14 +104,13 @@ public:
     virtual quint8 fanDuty() { return 50; }
     virtual quint8 brightness() { return 50; }
     virtual QString version() { return QStringLiteral("v.interface.class"); }
-    virtual QString fwInfo() { return QStringLiteral("v.fw.info"); }
     virtual short bucket() { return 0; }
     virtual int     rotationOffset() { return 0; }
     virtual qreal fps() { return 0; }
     virtual bool found() { return false; }
     virtual bool initialize(bool&){ return false;}
     virtual bool initialized() { return false; }
-    virtual bool monitorFPS() { return false; }
+    virtual bool isSoftware() { return true; }
     virtual QJsonObject toJsonProfile(){ return QJsonObject(); }
 
 signals:
@@ -129,10 +127,10 @@ signals:
     void deviceReady();
     void rotationOffsetChanged(int);
     void bucketChanged(quint8);
-    void monitorFPSChanged(bool);
 
 public slots:
-    virtual void blankScreen(){}
+    virtual void blankScreen(){ setBrightness(0); }
+    virtual void moveToBucket( int){}
     virtual void startMonitoringFramerate(){}
     virtual void stopMonitoringFramerate(){}
     virtual void setBrightness(quint8){}
@@ -141,44 +139,21 @@ public slots:
     virtual void setImage(QImage, quint8 = 0, bool = true){}
     virtual void setJsonProfile(QJsonObject){}
     virtual void setRotationOffset(int){}
-    virtual void sendStatusRequest(){}
-    virtual void sendHex(QString, bool){}
-    virtual void moveToBucket( int){}
     virtual void setNZXTMonitor(){}
     virtual void setBuiltIn(quint8){}
     virtual void setScreenOrientation(Qt::ScreenOrientation){}
     virtual void setMonitorFPS(bool = true){}
-    virtual void sendFWRequest(){}
-
-protected:
-    virtual void parseFWVersion(QByteArray&){}
-    virtual void parseStatus(QByteArray&){}
-    virtual void parseDeleteBucket(QByteArray&){}
-
-    // Control messages
-    virtual void sendBrightness(quint8){}
-    virtual void sendFanDuty(quint8){}
-    virtual void sendPumpDuty(quint8){}
-    virtual void sendQueryBucket(quint8, quint8){}
-    virtual void sendDeleteBucket(quint8){}
-    virtual void sendSwitchBucket(quint8, quint8){}
-    virtual void sendSwitchLiquidTempMode(){}
-    virtual void sendSetupBucket(quint8, quint8, quint16, quint16){}
-    virtual void sendWriteStartBucket(quint8){}
-    virtual void sendWriteFinishBucket(quint8){}
-    virtual void sendSetDutyProfile(quint8, const QList<TempPoint>&){}
-    // Bulk Transfer CTRL Message
-    virtual void sendBulkDataInfo(quint8, quint32){}
 };
 
 Q_DECLARE_INTERFACE(KrakenZInterface, "com.application.kzp")
 
 
-static KrakenZInterface*  CURRENT_KRAKENZ_DRIVER = nullptr;
-static KrakenZInterface*  HARDWARE_DRIVER = nullptr;
-static KrakenZInterface*  SOFTWARE_DRIVER = nullptr;
+
 class KrakenZDriver;
 class KrakenZSoftware;
+class KrakenZDriverSelect;
+
+extern KrakenZDriverSelect* KRAKEN_DRIVER_SELECT;
 
 class KrakenZDriverSelect: public QObject{
 
@@ -189,21 +164,17 @@ public:
         HARDWARE=1
     };
     Q_ENUM(DriverType)
-    KrakenZDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type = DriverType::HARDWARE);
-    KrakenZInterface* currentDriver() { return CURRENT_KRAKENZ_DRIVER; }
+    KrakenZInterface* currentDriver();
     DriverType driverType() { return mDriverType; }
-protected:
+    static void initializeDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type);
+    static KrakenZDriverSelect* GetInstance();
 
-    void releaseSoftwareDriver()
-    {
-        delete SOFTWARE_DRIVER;
-        SOFTWARE_DRIVER = nullptr;
-    }
-    void releaseHardwareDriver()
-    {
-        delete HARDWARE_DRIVER;
-        HARDWARE_DRIVER = nullptr;
-    }
+protected:    
+    KrakenZDriverSelect(QApplication* app, KrakenZDriverSelect::DriverType type = DriverType::HARDWARE);
+    ~KrakenZDriverSelect();
+    void releaseSoftwareDriver();
+    void releaseHardwareDriver();
+
 public:
     void releaseDrivers() // can release all resources before destructor
     {
@@ -216,16 +187,6 @@ signals:
     void driverChanged(QObject* driver);
 
 protected:
-
-    void setCurrentDriver(KrakenZInterface* driver) // C++ only
-    {
-        if(driver != CURRENT_KRAKENZ_DRIVER){
-            CURRENT_KRAKENZ_DRIVER = driver;
-            emit driverChanged(driver);
-        }
-    }
-
-    QApplication*    mApp;
     DriverType       mDriverType;
 };
 

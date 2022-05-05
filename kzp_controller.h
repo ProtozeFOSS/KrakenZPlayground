@@ -43,12 +43,13 @@ public:
       CONFIGURE_DRIVER = 1, // Made it to configuration close now is like accept and exit
       BACKGROUND = 2, // If everything went well, we made it here, enable systray
       FOREGROUND = 3, // Showing settings and preview (main window)
-      ERROR_PERMISSION = 4,
-      ERROR_DEVICE_NF = 5, // show option for software driver
-      ERROR_SETTINGS_NF = 6, // profile specified doesn't exist
-      ERROR_PROFILE_NF = 7, // profile specified doesn't exist
-      ERROR_PROFILES = 8, // profile specified doesn't exist
-      ERROR_PARSE_SETTINGS = 9 // check json in file
+      DETACHED = 4, // Showing preview detached on desktop
+      ERROR_PERMISSION = 5,
+      ERROR_DEVICE_NF = 6, // show option for software driver
+      ERROR_SETTINGS_NF = 7, // profile specified doesn't exist
+      ERROR_PROFILE_NF = 8, // profile specified doesn't exist
+      ERROR_PROFILES = 9, // profile specified doesn't exist
+      ERROR_PARSE_SETTINGS = 10 // check json in file
     };
     Q_ENUM(ApplicationState)
     explicit KZPController(QApplication *parent);
@@ -100,7 +101,6 @@ protected:
     ApplicationState              mStateBeforeLastError;
 
     // Backend Device Interface
-    KrakenZDriverSelect          mDriverSelect;
     KrakenZInterface*            mController;
     bool createDeviceController();
     bool setSoftwareController();
@@ -128,6 +128,7 @@ protected slots:
     void setProfile(QString name);
     void initializeBackend();
     void initializeMainWindow();
+    void previewDetached(bool detached);
     void showMainWindow();
     void setMainWindow();
     void releaseMainWindow();

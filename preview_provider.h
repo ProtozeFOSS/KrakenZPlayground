@@ -1,14 +1,14 @@
-#ifndef KRAKENIMAGEPROVIDER_H
-#define KRAKENIMAGEPROVIDER_H
+#ifndef PREVIEW_PROVIDER_H
+#define PREVIEW_PROVIDER_H
 
 #include <QQuickImageProvider>
 #include <QImage>
 
-class KrakenImageProvider : public QObject, public QQuickImageProvider
+class ProxyImageProvider : public QObject, public QQuickImageProvider
 {
     Q_OBJECT
 public:
-    explicit KrakenImageProvider(QObject* parent = nullptr);
+    explicit ProxyImageProvider(QObject* parent = nullptr);
     QImage requestImage(const QString &id, QSize *size, const QSize &requested_size) override;
 
 signals:
@@ -16,9 +16,10 @@ signals:
 
 public slots:
     void imageChanged(QImage frame);
+
 protected:
     QImage             mImageBuffer;
     bool               mDisplaying;
 };
 
-#endif // KRAKENIMAGEPROVIDER_H
+#endif // PREVIEW_PROVIDER_H

@@ -24,12 +24,12 @@ KrakenAppController::KrakenAppController(KrakenZInterface *controller, QObject *
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
-    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mStatusTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE), mDrawFPS(false), mPlaying(false)
+    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mStatusTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE),
+    mDrawFPS(false), mPlaying(false), mDetached(false)
 {
-
     mStatusTimer->setInterval(400);
     mStatusTimer->setSingleShot(false);
-    connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZInterface::sendStatusRequest);
+    //connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZInterface::sendStatusRequest);
     connect(mDelayTimer, &QTimer::timeout, this, &KrakenAppController::renderNext);
 }
 
@@ -127,6 +127,14 @@ void KrakenAppController::containerComponentReady()
         qDebug() << "Component failed" << mContainerComponent->errorString();
         emit qmlFailed(mContainerComponent->errorString());
         mContainerComponent->deleteLater();
+    }
+}
+
+void KrakenAppController::detachPreview(bool detach)
+{
+    if(mDetached != detach) {
+        mDetached = detach;
+        emit previewDetached(detach);
     }
 }
 
@@ -275,6 +283,7 @@ void KrakenAppController::releaseApplication(bool deleteComponent)
             mCurrentComponent = nullptr;
         }
         mAppEngine->collectGarbage();
+        mAppEngine->clearComponentCache();
     }
 }
 
@@ -418,9 +427,9 @@ bool KrakenAppController::event(QEvent *event)
     if(event->type() == QEvent::UpdateRequest)
     {
         if(mActive) {
-            if(mController){
-                mController->sendStatusRequest();
-            }
+//            if(mController){
+//                mController->sendStatusRequest();
+//            }
             emit draw();
             mDelayTimer->start();
         }

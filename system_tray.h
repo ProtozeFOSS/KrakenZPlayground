@@ -1,5 +1,5 @@
-#ifndef SYSTEMTRAY_H
-#define SYSTEMTRAY_H
+#ifndef SYSTEM_TRAY_H
+#define SYSTEM_TRAY_H
 
 #include <QObject>
 #include <QIcon>
@@ -39,4 +39,4 @@ protected slots:
 
 };
 
-#endif // SYSTEMTRAY_H
+#endif // SYSTEM_TRAY_H

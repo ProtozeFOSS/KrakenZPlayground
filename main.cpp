@@ -3,10 +3,10 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include "krakenz_driver.h"
-#include "krakenimageprovider.h"
+#include "preview_provider.h"
 #include "kraken_appcontroller.h"
 #include "qusbdevice.h"
-#include "systemtray.h"
+#include "system_tray.h"
 #include <QStandardPaths>
 #include <QDir>
 #include <iostream>

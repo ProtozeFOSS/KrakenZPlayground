@@ -34,7 +34,7 @@ Window {
                 topMargin: 4
             }
             leftPadding: 16
-            text: "Kraken Z3"
+            text: KrakenZDriver.isSoftware ? "Kraken Z3 ( Software )" : "Kraken Z3"
         }
 
         Rectangle{
@@ -964,7 +964,6 @@ Window {
                 right:rightOrientationLabel.left
             }
             snapMode:Slider.SnapOnRelease
-            value:KrakenZDriver.rotationOffset
             live:true
             from: 0
             to: 270
@@ -1187,7 +1186,9 @@ Window {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        setBrightnessSlider.value = 0;
+                        if(KrakenZDriver.initialized()) {
+                            KrakenZDriver.blankScreen();
+                        }
                     }
                 }
             }

@@ -93,7 +93,7 @@ bool KrakenZDriver::initialize(bool& permissionDenied)
         mMeasure.setInterval(1000);
         mMeasure.setSingleShot(false);
         mMeasure.setTimerType(Qt::PreciseTimer);
-        connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFrameRate);
+        connect(&mMeasure, &QTimer::timeout, this, &KrakenZDriver::updateFramerate);
         if(mKrakenDevice->open() ==  QUsb::statusOK)
         {
             mLCDDATA = new QUsbEndpoint(mKrakenDevice, QUsbEndpoint::bulkEndpoint, 0x02);
@@ -205,7 +205,7 @@ void KrakenZDriver::stopMonitoringFramerate()
     emit fpsChanged(mFPS);
 }
 
-void KrakenZDriver::updateFrameRate()
+void KrakenZDriver::updateFramerate()
 {
 
     mFPS += mFrames;
@@ -269,7 +269,7 @@ void KrakenZDriver::parseStatus(QByteArray &data)
             mFanSpeed = speed.value;
             emit fanSpeedChanged(mFanSpeed);
         }
-        auto fan_duty((quint8(data[25])));
+        auto fan_duty{quint8(data[25])};
         if(fan_duty != mFanDuty){
             mFanDuty = fan_duty;
             emit fanDutyChanged(mFanDuty);
@@ -367,7 +367,6 @@ void KrakenZDriver::setMonitorFPS(bool monitor)
         } else {
             stopMonitoringFramerate();
         }
-        emit monitorFPSChanged(monitor);
     }
 }
 
@@ -500,17 +499,6 @@ void generate_normalized_profile(QList<TempPoint> &normalized, const QList<TempP
             normalized.pop_back();
         }
     }
-}
-
-void KrakenZDriver::sendHex(QString hex_data, bool pad)
-{
-    if(pad && hex_data.size() < (_WRITE_LENGTH * 2)) // byte = 2 HEX nibbles
-    {
-        QString pad_str;
-        pad_str.fill('0', (_WRITE_LENGTH *2 - hex_data.size()));
-        hex_data.append(pad_str);
-    }
-    mLCDCTL->write(QByteArray::fromHex(hex_data.toLatin1()));
 }
 
 void KrakenZDriver::sendFWRequest()

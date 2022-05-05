@@ -14,10 +14,10 @@ SOURCES += \
         krakenz_interface.cpp \
         krakenz_software.cpp \
         kzp_controller.cpp \
-        krakenimageprovider.cpp \
         main.cpp \
+        preview_provider.cpp \
         settings.cpp \
-        systemtray.cpp
+        system_tray.cpp
 
 RESOURCES += qml.qrc \
     images.qrc
@@ -41,10 +41,10 @@ HEADERS += \
     krakenz_interface.h \
     krakenz_software.h \
     kzp_controller.h \
-    krakenimageprovider.h \
     kzp_keys.h \
+    preview_provider.h \
     settings.h \
-    systemtray.h
+    system_tray.h
 
 DISTFILES += \
     examples/Clock/Clock.qml \

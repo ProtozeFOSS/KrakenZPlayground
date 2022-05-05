@@ -50,6 +50,7 @@ class KrakenAppController : public QObject
     Q_PROPERTY(bool drawFPS READ drawFPS WRITE setDrawFPS NOTIFY drawFPSChanged MEMBER mDrawFPS)
     Q_PROPERTY(QString loadedPath READ loadedPath NOTIFY loadedPathChanged MEMBER mLoadedPath)
     Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
+    Q_PROPERTY(bool detachedPreview READ detachedPreview WRITE detachPreview NOTIFY previewDetached MEMBER mDetached)
 
 public:
     KrakenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
@@ -57,11 +58,18 @@ public:
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
     AppMode mode() {return mMode; }
+
+    // Public API
     Q_INVOKABLE void loadImage(QString file_path);
     Q_INVOKABLE bool loadQmlFile(QString path);
     Q_INVOKABLE QJsonObject toJsonProfile();
+    Q_INVOKABLE void setOrientationFromAngle(int angle);
+    Q_INVOKABLE QString getLocalFolderPath(QString path);
+
+
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
+    bool  detachedPreview() { return mDetached; }
     QSize screenSize() { return mSize; }
     void  closeQmlApplications();
     int   currentFPS() { return mFPS; }
@@ -82,8 +90,6 @@ public:
     void setBlueSize(int blue_size);
     void setGreenSize(int green_size);
     void setController(KrakenZInterface* controller){ mController = controller; }
-    Q_INVOKABLE void setOrientationFromAngle(int angle);
-    Q_INVOKABLE QString getLocalFolderPath(QString path);
     QString loadedPath() { return mLoadedPath; }
 
 signals:
@@ -96,6 +102,7 @@ signals:
     void fpsChanged(int fps);
     void initialized();
     void draw();
+    void previewDetached(bool detached); // true is detached, false is docked
     void frameReady(QImage frame);
     void orientationChanged(Qt::ScreenOrientation orientation);
     void modeChanged(KrakenAppController::AppMode mode);
@@ -106,6 +113,7 @@ signals:
 public slots:
     void initialize();
     void initializeOffScreenWindow();
+    void detachPreview(bool detached);
     void setBuiltIn(bool loadingGif);
     void setFrameDelay(int frame_delay);
     void setScreenSize(QSize screen_size);
@@ -157,6 +165,7 @@ protected:
     AppMode  mMode;
     bool     mDrawFPS;
     bool     mPlaying;
+    bool     mDetached;
     QString  mLoadedPath;
 
     void adjustAnimationDriver();

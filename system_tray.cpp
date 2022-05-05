@@ -1,4 +1,4 @@
-#include "systemtray.h"
+#include "system_tray.h"
 #include <QIcon>
 #include <QPixmap>
 #include <QMenu>
