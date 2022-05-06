@@ -19,7 +19,6 @@ Window {
         id: krakenRoot
         color: "#2a2e31"
         anchors.fill:parent
-        property bool showFPS: false
         Text{
             id: deviceName
             color:"white"
@@ -231,8 +230,9 @@ Window {
             text:KrakenZDriver.fanDuty + " %";
             font.family: "Cambria"
         }
-        LCDPreviewDelegate{
-            id:krakenPreview
+        PreviewContainer{
+            id:previewContainer
+            isDetached: AppController.detachedPreview
             anchors{
                 top: pumpSpeedLabel.top
                 right: parent.right
@@ -240,11 +240,12 @@ Window {
             }
             width:320
             height:320
+            radius:160
             layer.enabled:true
             layer.effect:DropShadow{
                 transparentBorder: true
-                source:krakenPreview
-                anchors.fill: krakenPreview
+                source:previewContainer.contentItem ? previewContainer.contentItem:undefined
+                anchors.fill: previewContainer
                 horizontalOffset: 2
                 verticalOffset: 10
                 radius: 16
@@ -253,96 +254,29 @@ Window {
                 color: "#000000"
             }
         }
-        Item{
-            id:imageOut
-            anchors.centerIn: krakenPreview
-            width:320
-            height:320
 
-            Rectangle{
-                id: lens
-                anchors.fill: parent
-                color:"black"
-                radius:width
-                opacity:0
-            }
 
-            Text{
-                function reset(){
-                    errorTitle.visible = false;
-                    errorText.text = "";
-                }
-                id:errorTitle
-                anchors.top:parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.topMargin: 16
-                text:"QML Error"
-                color:"lightblue"
-                horizontalAlignment: Text.AlignHCenter
-                font.pixelSize: 24
-                visible:false
-            }
-
-            Text{
-                id:errorText
-                anchors.centerIn:parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color:"white"
-                width:280
-                wrapMode:Text.WrapAnywhere
-                visible:errorTitle.visible
-            }
-            Rectangle{
-                visible: krakenRoot.showFPS && (AppController.mode > OffscreenApp.STATIC_IMAGE)
-                anchors.bottom:parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                height: 28
-                color: "#120084"
-                width: 110
-                radius:6
-                gradient: Gradient {
-                    GradientStop {
-                        position: 0.00;
-                        color: "#0000ff";
-                    }
-                    GradientStop {
-                        position: 0.95;
-                        color: "#161949";
-                    }
-                }
-                Text{
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 18
-                    style: Text.Sunken
-                    styleColor: "#01767a"
-                    color:"white"
-                    text: "FPS: " + KrakenZDriver.fps.toString().slice(0,5)
-                    font.family: "Comic Sans MS"
-                }
-            }
-        }
         Rectangle{
-            id:builtinMode
-            visible: AppController.mode == OffscreenApp.BUILT_IN
-            anchors.centerIn: krakenPreview
-            width:320
-            height:320
-            color: "#22262b"
-            radius:160
-            border.width: 2
-            border.color: "#5c5c5c"
-            Text{
+            border.color: "white"
+            radius:4
+            height:48
+            width:48
+            anchors{
+                bottom:previewContainer.top
+                left:previewContainer.right
+                margins:-36
+            }
+            MouseArea{
                 anchors.fill: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 24
-                font.family: "Comic Sans MS"
-                text:"OEM\nDisplay Mode"
-                style:Text.Sunken
-                color:"white"
+                onClicked:{
+                    var detached = AppController.detachedPreview;
+                    if(detached){
+                        console.log("Attaching Preview");
+                    }else {
+                        console.log("Detaching Preview");
+                    }
+                    AppController.detachPreview(!detached)
+                }
             }
         }
 
@@ -352,8 +286,8 @@ Window {
             radius:width
             visible:AppController.mode === OffscreenApp.GIF_MODE
             anchors{
-                bottom:krakenPreview.bottom
-                right:krakenPreview.right
+                bottom:previewContainer.bottom
+                right:previewContainer.right
                 rightMargin: 8
             }
             Image{
@@ -379,13 +313,13 @@ Window {
             id: options
             visible: AppController.mode >= OffscreenApp.GIF_MODE
             color: "#8d8d8d"
-            anchors.top:krakenPreview.bottom
+            anchors.top:previewContainer.bottom
             anchors.topMargin: 8
             radius:6
             border.color: "#004d4d4d"
             height:AppController.mode > OffscreenApp.GIF_MODE ?  206:138
-            anchors.left: krakenPreview.left
-            anchors.right: krakenPreview.right
+            anchors.left: previewContainer.left
+            anchors.right: previewContainer.right
             Text{
                 id:optionsTitle
                 text:"Options"
@@ -436,20 +370,20 @@ Window {
                     radius:4
                     height:32
                     width:parent.width - 8
-                    color:krakenRoot.showFPS ? "red" : "#cc03d429"
+                    color:previewContainer.showFPS ? "red" : "#cc03d429"
                     anchors.horizontalCenter: parent.horizontalCenter
                     Text{
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        text:krakenRoot.showFPS ? "Hide FPS" : "Show FPS";
+                        text:previewContainer.showFPS ? "Hide FPS" : "Show FPS";
                         color:"white"
                     }
                     MouseArea{
                         anchors.fill: parent
                         onClicked:{
-                            krakenRoot.showFPS = !krakenRoot.showFPS;
-                            if(!krakenRoot.showFPS) {
+                            previewContainer.showFPS = !previewContainer.showFPS;
+                            if(!previewContainer.showFPS) {
                                 AppController.drawFPS = false;
                             } else {
                                 AppController.drawFPS = drawCheck.checked;
@@ -460,7 +394,7 @@ Window {
                 Rectangle{
                     border.color: "black"
                     radius:4
-                    visible: krakenRoot.showFPS
+                    visible: previewContainer.showFPS
                     height:32
                     width:parent.width - 8
                     color:AppController.drawFPS ? "red" : "#cc03d429"
@@ -690,7 +624,7 @@ Window {
             horizontalAlignment: Text.AlignHCenter
             anchors{
                 verticalCenter: setFanSlider.verticalCenter
-                right:krakenPreview.left
+                right:previewContainer.left
                 rightMargin: 24
             }
         }
@@ -879,17 +813,7 @@ Window {
             }
 
             onValueChanged: {
-                if(value > 50){
-                    lens.color = "white";
-                    lens.opacity = value/100 - 0.85;
-                } else {
-                    lens.color = "black";
-                    if(value == 0){
-                        lens.opacity = 1.0;
-                    }else {
-                        lens.opacity = (50 - value)/100;
-                    }
-                }
+               previewContainer.brightness = value
                 if(KrakenZDriver.initialized()) {
                     KrakenZDriver.setBrightness(value);
                 }
@@ -1261,6 +1185,9 @@ Window {
 
         Component.onCompleted:{
             unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
+        }
+        Component.onDestruction: {
+            console.log("Main Window destroyed");
         }
     }
 }

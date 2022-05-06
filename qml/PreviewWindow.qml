@@ -113,26 +113,23 @@ Window {
         }
     }
     MouseArea
-     {
-         anchors.fill: parent
+    {
+        anchors.fill: parent
 
-         property int m_x : 0;
-         property int m_y : 0;
+        property int m_x : 0;
+        property int m_y : 0;
 
-         onPressed:
-         {
-             m_x = mouse.x;
-             m_y = mouse.y;
-         }
+        onPressed:
+        {
+            m_x = mouse.x;
+            m_y = mouse.y;
+        }
 
-         onPositionChanged:
-         {
-             window.x = window.x + mouse.x - m_x
-             window.y = window.y + mouse.y - m_y
-         }
+        onPositionChanged:
+        {
+            window.x = window.x + mouse.x - m_x
+            window.y = window.y + mouse.y - m_y
+        }
 
-     }
-    Component.onCompleted: {
-        AppController.loadQmlFile("file:/C:/Users/opopo/AppData/Local/Kraken Z Playground/examples/KZP_Clock/kzp_clock.qml")
     }
 }

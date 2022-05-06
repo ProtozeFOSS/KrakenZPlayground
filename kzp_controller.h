@@ -7,6 +7,7 @@
 #include <QIcon>
 class QApplication;
 class QQuickItem;
+class QQuickWindow;
 class QQmlApplicationEngine;
 class QQmlComponent;
 class KrakenAppController;
@@ -61,6 +62,7 @@ public:
     const QString activeProfile() { return mActiveProfile; }
     const QString applicationVersion() { return APP_VERSION; }
     void setSettingsConfiguration(QString directory, QString profile_name, bool userDirectory);
+    Q_INVOKABLE void setPreviewWindow(QObject* window);
 
 signals:
     void containerChanged(QQuickItem* container);
@@ -99,6 +101,7 @@ protected:
     QQmlApplicationEngine*        mUxEngine;
     ApplicationState              mState;
     ApplicationState              mStateBeforeLastError;
+    void setUxObjects();
 
     // Backend Device Interface
     KrakenZInterface*            mController;
@@ -116,6 +119,13 @@ protected:
 
     void cleanUp(); // clean it all up
 
+
+    // Preview Window
+    QQuickWindow*                 mPreviewWindow;
+    void createPreviewItem(QQmlComponent *pw_component);
+    void createPreviewWindow();
+    void cleanupPreviewWindow();
+
 protected slots:
     // When the UX is changed, this method will control what to do
    // void componentReady();
@@ -123,15 +133,17 @@ protected slots:
     void backgroundContainerReady();
     void connectToWindow();
     void cleanUpWindow();
+    void previewComponentReady(QQmlComponent::Status status);
+    void previewDetached(bool detached);
     void processBackgroundFrame(QImage frame);
     void moveToBackground();
     void setProfile(QString name);
     void initializeBackend();
-    void initializeMainWindow();
-    void previewDetached(bool detached);
+    bool initializeMainWindow();
     void showMainWindow();
     void setMainWindow();
     void releaseMainWindow();
+
 
 };
 

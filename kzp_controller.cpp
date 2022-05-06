@@ -22,6 +22,7 @@ static constexpr char PREVIEW_WINDOW[] = "qrc:/qml/PreviewWindow.qml";
 static constexpr char PERMISSION_ERROR[] = "qrc:/qml/PermissionDenied.qml";
 static constexpr char SETTINGS_ERROR[] = "qrc:/qml/SettingsError.qml";
 static constexpr char MISSING_PROFILE[] = "qrc:/qml/MissingProfile.qml";
+static constexpr char EMPTY[] = "";
 
 
 
@@ -34,7 +35,8 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 
 KZPController::KZPController(QApplication *parent)
     : QObject{parent}, mAppliedSettings{false}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
-       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr}
+      mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr},
+      mPreviewWindow{nullptr}
 {
     KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::SOFTWARE);
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
@@ -140,6 +142,45 @@ void KZPController::cleanUpWindow()
     setMainWindow();
 }
 
+
+
+
+void KZPController::createPreviewWindow()
+{
+    if(mUxEngine && !mPreviewWindow) {
+        // create the preview window component
+        auto pw_component = new QQmlComponent(mUxEngine, QUrl(PREVIEW_WINDOW));
+        if(pw_component && pw_component->isReady()) {
+            createPreviewItem(pw_component);
+        }else {
+            connect(pw_component, &QQmlComponent::statusChanged, this, &KZPController::previewComponentReady);
+        }
+        // load it
+    }
+}
+
+void KZPController::createPreviewItem(QQmlComponent* pw_component)
+{
+    if(!mPreviewWindow) {
+        // load preview settings, use for create statement
+        mPreviewWindow = qobject_cast<QQuickWindow*>(pw_component->create());
+    }
+}
+
+void KZPController::previewComponentReady(QQmlComponent::Status status)
+{
+    auto pw_component{qobject_cast<QQmlComponent*>(sender())};
+    if(!pw_component){
+        return;
+    }
+    if(status == QQmlComponent::Ready) {
+        createPreviewItem(pw_component);
+    } else {
+        qDebug() << "Failed to create preview window component\n" << pw_component->errorString();
+        pw_component->deleteLater();
+    }
+}
+
 void KZPController::createSystemTray()
 {
     mSystemTray = new SystemTray(this);
@@ -156,7 +197,11 @@ void KZPController::moveToBackground()
         QApplication::exit(0);
         return;
     }
-    mState = ApplicationState::BACKGROUND;
+    if(mKrakenAppController && mKrakenAppController->detachedPreview()){ // moving to detached
+        mState = ApplicationState::DETACHED;
+    }else{
+        mState = ApplicationState::BACKGROUND;
+    }
     setMainWindow();
 }
 
@@ -285,17 +330,24 @@ void KZPController::previewDetached(bool detached)
     // in detached - if preview window closed, move to background
     switch(mState) {
         case ApplicationState::FOREGROUND:{
-            if(detached) {
-                // create a new root object that is detached preview
-            } else {
-                // destroy that root object that is the detached preview
+            if(!detached) {
+                mPreviewWindow = nullptr;
             }
             break;
         }
         case ApplicationState::BACKGROUND: {
+            if(detached){
+                mState = ApplicationState::DETACHED;
+                setMainWindow();
+            }
             break;
         }
-        // Add new state Detached
+        case ApplicationState::DETACHED:{
+            if(!detached){
+                mState = ApplicationState::BACKGROUND;
+                setMainWindow();
+            }
+        }
         default:;
     }
 }
@@ -320,12 +372,24 @@ void KZPController::initializeBackend()
     }
 }
 
-void KZPController::initializeMainWindow()
+bool KZPController::initializeMainWindow()
 {
-    if(!mUxEngine) {
+    bool created{mUxEngine == nullptr};
+    if(created) {
         mUxEngine = new QQmlApplicationEngine(this);
         connect(mUxEngine, &QQmlApplicationEngine::objectCreated, this, &KZPController::connectToWindow);
     }
+    return created;
+}
+void KZPController::setPreviewWindow(QObject* window)
+{
+    if(window == mPreviewWindow){
+        return;
+    }
+    mPreviewWindow = qobject_cast<QQuickWindow*>(window);
+    connect(mPreviewWindow, &QQuickItem::destroyed, this, [this](){
+       mPreviewWindow = nullptr;
+    });
 }
 
 void KZPController::setMainWindow()
@@ -354,19 +418,25 @@ void KZPController::setMainWindow()
             break;
         }
         case ApplicationState::FOREGROUND: {
-            initializeMainWindow();
-            qmlFile = KRAKEN_Z;
-            auto previewProvider {new ProxyImageProvider()}; // uses preview
-            mUxEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
-            mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
-            mUxEngine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
-            mUxEngine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
-            QObject::connect(mKrakenAppController, &KrakenAppController::frameReady, previewProvider, &ProxyImageProvider::imageChanged);
-            mUxEngine->rootContext()->setContextProperty("ApplicationData", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
-            if(!mSystemTray){
-                createSystemTray();
+            releaseMainWindow();
+            if(initializeMainWindow()){
+                qmlFile = KRAKEN_Z;
+                setUxObjects();
+                if(!mSystemTray){
+                    createSystemTray();
+                }
             }
-
+            break;
+        }
+        case ApplicationState::DETACHED:{
+            releaseMainWindow();
+            if(initializeMainWindow()){
+                qmlFile = PREVIEW_WINDOW;
+                setUxObjects();
+                if(!mSystemTray){
+                    createSystemTray();
+                }
+            }
             break;
         }
         case ApplicationState::ERROR_DEVICE_NF:
@@ -413,6 +483,19 @@ void KZPController::releaseMainWindow()
     }
 }
 
+void KZPController::setUxObjects()
+{
+    if(!mUxEngine->imageProvider("krakenz")){
+        auto previewProvider {new ProxyImageProvider()}; // uses preview
+        mUxEngine->rootContext()->setContextProperty("KZP", this);
+        mUxEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
+        mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
+        mUxEngine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
+        mUxEngine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
+        QObject::connect(mKrakenAppController, &KrakenAppController::frameReady, previewProvider, &ProxyImageProvider::imageChanged);
+        mUxEngine->rootContext()->setContextProperty("ApplicationData", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    }
+}
 
 void KZPController::showMainWindow()
 {

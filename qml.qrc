@@ -10,5 +10,6 @@
         <file>qml/SettingsError.qml</file>
         <file>qml/PreviewWindow.qml</file>
         <file>qml/MissingProfile.qml</file>
+        <file>qml/PreviewContainer.qml</file>
     </qresource>
 </RCC>

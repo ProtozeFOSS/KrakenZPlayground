@@ -258,8 +258,12 @@ void KrakenZSoftware::updateFramerate()
     auto nextWaterTemp{qAbs(mWaterTarget - mLiquidTemp) < qAbs(mWaterDelta) ? mWaterTarget: mLiquidTemp + mWaterDelta};
     if(nextWaterTemp != mLiquidTemp) {
         mLiquidTemp = nextWaterTemp;
-    }else {
+    } else {
         mLiquidTemp += (mLiquidTemp * getLiquidJitter());
+    }
+    if(mLiquidTemp >= 50 || mLiquidTemp < 24){
+        mWaterTarget = mLiquidTemp = 32.25 - ((mFanDuty + mPumpDuty) * .00865);
+        mWaterDelta = 0;
     }
     emit liquidTemperatureChanged(mLiquidTemp);
     mFPS += (mFrames *.954);
