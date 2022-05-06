@@ -269,13 +269,7 @@ Window {
             MouseArea{
                 anchors.fill: parent
                 onClicked:{
-                    var detached = AppController.detachedPreview;
-                    if(detached){
-                        console.log("Attaching Preview");
-                    }else {
-                        console.log("Detaching Preview");
-                    }
-                    AppController.detachPreview(!detached)
+                    AppController.detachPreview(!AppController.detachedPreview)
                 }
             }
         }
@@ -1181,13 +1175,8 @@ Window {
                 errorTitle.visible = true;
             }
         }
-
-
         Component.onCompleted:{
             unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
-        }
-        Component.onDestruction: {
-            console.log("Main Window destroyed");
         }
     }
 }

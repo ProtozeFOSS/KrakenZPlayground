@@ -9,7 +9,19 @@ Item {
     property int  radius: 0
     property int  brightness: 50
     onIsDetachedChanged: {
-        previewWindow.active = root.isDetached;
+        detachTimer.start();
+    }
+    Timer{
+        id:detachTimer
+        interval:50
+        running:false
+        repeat:false
+        onTriggered: {
+            loader.active = false
+            loader.sourceComponent = root.isDetached ? empty : previewComponent
+            loader.active = true
+            previewWindow.active = root.isDetached;
+        }
     }
 
     onBrightnessChanged: {
@@ -30,7 +42,8 @@ Item {
 
     Loader{
         id:loader
-        sourceComponent: root.isDetached ? empty : previewComponent
+        active:false
+        sourceComponent: empty
     }
     Loader{
         id:previewWindow
@@ -173,6 +186,6 @@ Item {
         }
     }
     Component.onCompleted: {
-        previewWindow.active = root.isDetached;
+        detachTimer.start();
     }
 }
