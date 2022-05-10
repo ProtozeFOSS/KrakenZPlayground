@@ -232,7 +232,7 @@ Window {
         }
         PreviewContainer{
             id:previewContainer
-            isDetached: AppController.detachedPreview
+            isDetached: KZP ? KZP.detachedPreview : false
             anchors{
                 top: pumpSpeedLabel.top
                 right: parent.right
@@ -256,20 +256,23 @@ Window {
         }
 
 
-        Rectangle{
-            border.color: "white"
-            radius:4
-            height:48
-            width:48
+        Image{
+            height:36
+            width:36
+            enabled: AppController.mode >= OffscreenApp.STATIC_IMAGE
+            visible:enabled
             anchors{
                 bottom:previewContainer.top
                 left:previewContainer.right
-                margins:-36
+                margins:-42
             }
+            antialiasing: true
+            smooth: true
+            source:!AppController ? "qrc:/images/upload.svg": (KZP.detachedPreview ? "qrc:/images/download.svg":"qrc:/images/upload.svg")
             MouseArea{
                 anchors.fill: parent
                 onClicked:{
-                    AppController.detachPreview(!AppController.detachedPreview)
+                    KZP.detachPreview(!KZP.detachedPreview)
                 }
             }
         }
@@ -364,20 +367,20 @@ Window {
                     radius:4
                     height:32
                     width:parent.width - 8
-                    color:previewContainer.showFPS ? "red" : "#cc03d429"
+                    color:AppController.showFPS ? "red" : "#cc03d429"
                     anchors.horizontalCenter: parent.horizontalCenter
                     Text{
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        text:previewContainer.showFPS ? "Hide FPS" : "Show FPS";
+                        text:AppController.showFPS ? "Hide FPS" : "Show FPS";
                         color:"white"
                     }
                     MouseArea{
                         anchors.fill: parent
                         onClicked:{
-                            previewContainer.showFPS = !previewContainer.showFPS;
-                            if(!previewContainer.showFPS) {
+                            AppController.showFPS = !AppController.showFPS;
+                            if(!AppController.showFPS) {
                                 AppController.drawFPS = false;
                             } else {
                                 AppController.drawFPS = drawCheck.checked;
@@ -388,7 +391,7 @@ Window {
                 Rectangle{
                     border.color: "black"
                     radius:4
-                    visible: previewContainer.showFPS
+                    visible: AppController.showFPS
                     height:32
                     width:parent.width - 8
                     color:AppController.drawFPS ? "red" : "#cc03d429"
@@ -807,7 +810,9 @@ Window {
             }
 
             onValueChanged: {
-               previewContainer.brightness = value
+                if(previewContainer) {
+                    previewContainer.brightness = value
+                }
                 if(KrakenZDriver.initialized()) {
                     KrakenZDriver.setBrightness(value);
                 }
@@ -1160,20 +1165,6 @@ Window {
             spacing: 42
             orientation: ListView.Horizontal
             model: actionModel
-        }
-        Connections{
-            target: AppController
-            function onAppReady(){
-                errorTitle.reset();
-            }
-            function onModeChanged(mode) {
-                errorTitle.reset();
-            }
-
-            function onQmlFailed(error) {
-                errorText.text = error;
-                errorTitle.visible = true;
-            }
         }
         Component.onCompleted:{
             unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)

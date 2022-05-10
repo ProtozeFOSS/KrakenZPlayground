@@ -11,5 +11,7 @@
         <file>qml/PreviewWindow.qml</file>
         <file>qml/MissingProfile.qml</file>
         <file>qml/PreviewContainer.qml</file>
+        <file>qml/LCDPreview.qml</file>
+        <file>qml/PreviewOverlay.qml</file>
     </qresource>
 </RCC>

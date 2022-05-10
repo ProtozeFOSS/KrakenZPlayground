@@ -48,9 +48,10 @@ class KrakenAppController : public QObject
     Q_PROPERTY(int currentFPS READ currentFPS NOTIFY fpsChanged MEMBER mFPS)
     Q_PROPERTY(AppMode mode READ mode NOTIFY modeChanged MEMBER mMode)
     Q_PROPERTY(bool drawFPS READ drawFPS WRITE setDrawFPS NOTIFY drawFPSChanged MEMBER mDrawFPS)
+    Q_PROPERTY(bool showFPS READ showFPS WRITE setShowFPS NOTIFY showFPSChanged MEMBER mShowFPS)
     Q_PROPERTY(QString loadedPath READ loadedPath NOTIFY loadedPathChanged MEMBER mLoadedPath)
     Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
-    Q_PROPERTY(bool detachedPreview READ detachedPreview WRITE detachPreview NOTIFY previewDetached MEMBER mDetached)
+    Q_PROPERTY(bool hasSettings READ hasSettings NOTIFY hasSettingsChanged MEMBER mSettings)
 
 public:
     KrakenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
@@ -65,11 +66,11 @@ public:
     Q_INVOKABLE QJsonObject toJsonProfile();
     Q_INVOKABLE void setOrientationFromAngle(int angle);
     Q_INVOKABLE QString getLocalFolderPath(QString path);
+    Q_INVOKABLE void toggleSettings();
 
 
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
-    bool  detachedPreview() { return mDetached; }
     QSize screenSize() { return mSize; }
     void  closeQmlApplications();
     int   currentFPS() { return mFPS; }
@@ -80,9 +81,11 @@ public:
     int   redSize()  { return mRedSize; }
     int   greenSize() { return mGreenSize; }
     int   frameDelay() { return mFrameDelay; }
+    bool   hasSettings() { return mSettings; }
     void  setPrimaryScreen(QScreen* screen);
     Qt::ScreenOrientation orientation() { return mOrientation; }
     bool drawFPS() { return mDrawFPS; }
+    bool showFPS() { return mShowFPS; }
     void setDepthSize(int depth_size);
     void setStencilSize(int stencil_size);
     void setAlphaSize(int alpha_size);
@@ -102,23 +105,24 @@ signals:
     void fpsChanged(int fps);
     void initialized();
     void draw();
-    void previewDetached(bool detached); // true is detached, false is docked
     void frameReady(QImage frame);
     void orientationChanged(Qt::ScreenOrientation orientation);
     void modeChanged(KrakenAppController::AppMode mode);
     void loadGIFPrompt(QString file_path);
     void drawFPSChanged(bool draw_fps);
+    void showFPSChanged(bool show_fps);
     void loadedPathChanged(QString path);
+    void hasSettingsChanged(bool has_settings);
 
 public slots:
     void initialize();
     void initializeOffScreenWindow();
-    void detachPreview(bool detached);
     void setBuiltIn(bool loadingGif);
     void setFrameDelay(int frame_delay);
     void setScreenSize(QSize screen_size);
     void setOrientation(Qt::ScreenOrientation orientation, bool updateController = true);
     void setDrawFPS(bool draw_fps);
+    void setShowFPS(bool show_fps);
     void setJsonProfile(QJsonObject profile);
     void setAnimationPlaying(bool playing = true);
 
@@ -164,8 +168,9 @@ protected:
     qreal    mDPR;
     AppMode  mMode;
     bool     mDrawFPS;
+    bool     mShowFPS;
     bool     mPlaying;
-    bool     mDetached;
+    bool     mSettings;
     QString  mLoadedPath;
 
     void adjustAnimationDriver();

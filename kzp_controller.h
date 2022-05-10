@@ -36,6 +36,10 @@ class KZPController : public QObject
     Q_PROPERTY(ApplicationState state READ state NOTIFY stateChanged MEMBER mState)
     Q_PROPERTY(QString activeProfile READ activeProfile NOTIFY profileChanged MEMBER mActiveProfile)
     Q_PROPERTY(QString version READ applicationVersion CONSTANT)
+    Q_PROPERTY(quint32 previewX READ previewX CONSTANT)
+    Q_PROPERTY(quint32 previewY READ previewY CONSTANT)
+    Q_PROPERTY(bool detachedPreview READ detachedPreview WRITE detachPreview NOTIFY previewDetached MEMBER mDetached)
+    Q_PROPERTY(bool movementLocked READ movementLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
 
 public:
     enum ApplicationState{
@@ -58,15 +62,22 @@ public:
     ApplicationState state() { return mState; }
     Q_INVOKABLE  void acceptUserAgreement();
     Q_INVOKABLE  void configured();
+    bool  detachedPreview() { return mDetached; }
+    bool  movementLocked() { return mLocked; }
     Q_INVOKABLE  void selectSoftwareDriver();
     const QString activeProfile() { return mActiveProfile; }
     const QString applicationVersion() { return APP_VERSION; }
+    quint32 previewX() { return mPreviewX; }
+    quint32 previewY() { return mPreviewY; }
     void setSettingsConfiguration(QString directory, QString profile_name, bool userDirectory);
     Q_INVOKABLE void setPreviewWindow(QObject* window);
+    Q_INVOKABLE void recordPreviewLocation(quint32 x, quint32 y);
 
 signals:
     void containerChanged(QQuickItem* container);
     void errorOccurred(QString error_message);
+    void previewDetached(bool detached); // true is detached, false is docked
+    void movementLocked(bool locked);
 
     // Settings UX Signals
     void profileAdded(QString name);
@@ -85,6 +96,8 @@ public slots:
 
     // Handle QApplication logic
     void applicationInitialize();
+    void detachPreview(bool detached);
+    void lockMovement(bool lock);
     void applicationQuiting();
 
 
@@ -122,9 +135,10 @@ protected:
 
     // Preview Window
     QQuickWindow*                 mPreviewWindow;
-    void createPreviewItem(QQmlComponent *pw_component);
-    void createPreviewWindow();
-    void cleanupPreviewWindow();
+    quint32                       mPreviewX;
+    quint32                       mPreviewY;
+    bool                          mDetached;
+    bool                          mLocked;
 
 protected slots:
     // When the UX is changed, this method will control what to do
@@ -133,8 +147,6 @@ protected slots:
     void backgroundContainerReady();
     void connectToWindow();
     void cleanUpWindow();
-    void previewComponentReady(QQmlComponent::Status status);
-    void previewDetached(bool detached);
     void processBackgroundFrame(QImage frame);
     void moveToBackground();
     void setProfile(QString name);

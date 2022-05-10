@@ -20,12 +20,12 @@
 #include "krakenz_driver.h"
 
 KrakenAppController::KrakenAppController(KrakenZInterface *controller, QObject *parent)
-    : QObject(parent), mController(controller), mContainer(nullptr), mCurrentApp(nullptr), mCurrentComponent(nullptr), mContainerComponent{nullptr},
+    : QObject{parent}, mController{controller}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
     mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mStatusTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE),
-    mDrawFPS(false), mPlaying(false), mDetached(false)
+    mDrawFPS(false), mShowFPS{false}, mPlaying(false), mSettings{false}
 {
     mStatusTimer->setInterval(400);
     mStatusTimer->setSingleShot(false);
@@ -55,6 +55,11 @@ void KrakenAppController::createApplication()
         mCurrentApp->setParentItem(appContainer);
     } else {
         mCurrentApp->setParentItem(mContainer);
+    }
+    auto hasSettings{mCurrentApp->property("settings").isValid()};
+    if(hasSettings != mSettings) {
+        mSettings = hasSettings;
+        emit hasSettingsChanged(mSettings);
     }
     mCurrentApp->setWidth(mSize.width());
     mCurrentApp->setHeight(mSize.height());
@@ -130,13 +135,6 @@ void KrakenAppController::containerComponentReady()
     }
 }
 
-void KrakenAppController::detachPreview(bool detach)
-{
-    if(mDetached != detach) {
-        mDetached = detach;
-        emit previewDetached(detach);
-    }
-}
 
 QString KrakenAppController::getLocalFolderPath(QString path)
 {
@@ -303,6 +301,7 @@ void KrakenAppController::renderNext()
 
 void KrakenAppController::resetAppEngine()
 {
+    mSettings = false;
     if(mAppEngine) {
         mAppEngine->clearComponentCache();
         mAppEngine->collectGarbage();
@@ -323,6 +322,13 @@ void KrakenAppController::resetAppEngine()
         mAppEngine->setIncubationController(mOffscreenWindow->incubationController());
     }
     createContainer();
+}
+
+void KrakenAppController::toggleSettings()
+{
+    if(mSettings && mCurrentApp) {
+        mCurrentApp->setProperty("settings", !mCurrentApp->property("settings").toBool());
+    }
 }
 
 void KrakenAppController::setAnimationPlaying(bool playing)
@@ -375,6 +381,15 @@ void KrakenAppController::setScreenSize(QSize screen_size)
     if(screen_size.width() != mSize.width() || screen_size.height() != mSize.height()) {
         mSize = screen_size;
         emit screenSizeChanged(screen_size);
+    }
+}
+
+
+void KrakenAppController::setShowFPS(bool show_fps)
+{
+    if(mShowFPS != show_fps) {
+        mShowFPS = show_fps;
+        emit showFPSChanged(show_fps);
     }
 }
 

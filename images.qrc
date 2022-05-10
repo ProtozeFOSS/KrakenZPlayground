@@ -8,5 +8,9 @@
         <file>images/Peyton.png</file>
         <file>images/Outer Ring and Hose.png</file>
         <file>images/not-found.png</file>
+        <file>images/download.svg</file>
+        <file>images/upload.svg</file>
+        <file>images/lock.svg</file>
+        <file>images/unlock.svg</file>
     </qresource>
 </RCC>
