@@ -8,48 +8,7 @@
 
 typedef KZPController::ApplicationState AppState;
 
-
 constexpr char SETTINGS_FNAME[] = "settings.json";
-
-//void SettingsManager::applyStartupProfile()
-//{
-//    auto profileName{mProfileName.size() ? mProfileName:mSettingsObject.value("startProfile").toString()};
-//    if(profileName.size()) {
-//        auto profiles = mSettingsObject.value("profiles").toArray();
-//        auto profileCount = profiles.size();
-//        bool notFound(true);
-//        for(int index{0}; index < profileCount; ++index){
-//            auto profile = profiles.at(index).toObject();
-//            auto name = profile.value("name").toString();
-//            if(name.compare(profileName) == 0) { // found startup profile
-//                mProfileName = name;
-//                auto data = profile.value("data").toObject();
-//                emit profilesLoaded();
-//                emit profileChanged(index, data);
-//                notFound = false;
-//            }
-//        }
-//        if(notFound) {
-//            mSettingsErrored = true;
-//            emit settingsErrored(true);
-//        }
-//    }
-//}
-
-
-
-//void SettingsManager::createDefaultSettings()
-//{
-//    if(mSettingsErrored){
-//        return;
-//    }
-//    QFile settingsFile(mFilePath);
-//    if(settingsFile.open(QFile::WriteOnly)) {
-//        QJsonDocument doc;
-//        doc.setObject(defaultSettingsObject());
-//        settingsFile.write(doc.toJson());
-//    }
-//}
 
 static inline unsigned int countLineNumbers(const QByteArray& data, int& offset)
 {
@@ -114,8 +73,12 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
                         auto name = profile.value("name").toString();
                         if(name.compare(profileName) == 0) { // found startup profile
                             profileName = name;
-                            settings.insert("activeProfile", profile.value("data").toObject());
-                            state = AppState::BACKGROUND;
+                            settings.insert("activeProfile", profile);
+                            if(profile.contains("state")) {
+                                state = AppState(profile.value("state").toInt());
+                            } else {
+                                state = AppState::BACKGROUND;
+                            }
                             notFound = false; // on success, the settings object is returned
                             break;
                         }
@@ -170,51 +133,32 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
     return settings;
 }
 
-QJsonObject Settings::defaultProfileObject()
+QString Settings::getSettingsPath(QString directory)
 {
-    QJsonObject profile;
-    profile.insert("name","Default");
-    profile.insert("data",QJsonObject());
-    return profile;
+    QString path{directory};
+    path.append(QDir::separator());
+    path.append(SETTINGS_FNAME);
+    return path;
 }
 
-QJsonObject Settings::defaultSettingsObject()
+QJsonObject Settings::getRootObject(QString directory)
 {
-    QJsonObject settings;
-    settings.insert("profiles",QJsonArray());
-    settings.insert("appSettings",QJsonObject());
-    return settings;
+    QJsonObject data;
+    QFile settingsFile(Settings::getSettingsPath(directory));
+    if(settingsFile.open(QFile::ReadOnly)){
+        auto doc{QJsonDocument::fromJson(settingsFile.readAll())};
+        data = doc.object();
+    }
+    return data;
 }
 
-
-
-//void SettingsManager::writeSettingsOnExit(QJsonObject current_settings)
-//{
-//    auto profiles = mSettingsObject.value("profiles").toArray();
-//    if(profiles.size() == 0) {
-//        // create default profile
-//        auto default_profile = defaultProfileObject();
-//        default_profile.remove("data");
-//        default_profile.insert("data", current_settings);
-//        default_profile.insert("name", "Default");
-//        profiles.append(default_profile);
-//        mSettingsObject.insert("startProfile","Default");
-//        mSettingsObject.insert("profiles",profiles);
-//        writeCurrentSettings();
-//    }else {
-//        auto profileCount = profiles.size();
-//        for(int index{0}; index < profileCount; ++index){
-//            auto profile = profiles.at(index).toObject();
-//            auto name = profile.value("name").toString();
-//            if(name.compare(mProfileName) == 0) { // found startup profile
-//                auto default_profile = defaultProfileObject();
-//                default_profile.insert("data", current_settings);
-//                default_profile.insert("name", mProfileName);
-//                profiles.replace(index,default_profile);
-//                mSettingsObject.insert("profiles", profiles);
-//                writeCurrentSettings();
-//            }
-//        }
-//    }
-//    qDebug() << "Updated settings file @" << mFilePath;
-//}
+void Settings::writeObject(QString directory, QJsonObject object)
+{
+    QJsonObject data;
+    QFile settingsFile(Settings::getSettingsPath(directory));
+    if(settingsFile.open(QFile::WriteOnly)){
+        QJsonDocument doc;
+        doc.setObject(object);
+        settingsFile.write(doc.toJson());
+    }
+}

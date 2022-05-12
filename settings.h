@@ -14,10 +14,9 @@ class Settings
 public:
 
     static QJsonObject loadSettings(QString directory, QString& profileName, int& state, bool userDirectory);
-    static QJsonObject defaultProfileObject();
-    static QJsonObject defaultSettingsObject();
-    static void writeSettingsFile(QString directory, QJsonObject settings);
-
+    static QString getSettingsPath(QString directory);
+    static QJsonObject getRootObject(QString directory);
+    static void        writeObject(QString directory, QJsonObject object);
     // on updates/changes save profile.
 protected:
     Settings(){};
