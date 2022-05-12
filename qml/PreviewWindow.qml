@@ -43,9 +43,9 @@ Window {
             onPositionChanged:
             {
                 if(!KZP.movementLocked) {
-                    window.x = window.x + mouse.x - m_x
-                    window.y = window.y + mouse.y - m_y
-                    KZP.recordPreviewLocation(window.x, window.y);
+                    previewWindow.x = previewWindow.x + mouse.x - m_x
+                    previewWindow.y = previewWindow.y + mouse.y - m_y
+                    KZP.recordPreviewLocation(previewWindow.x, previewWindow.y);
                 }
             }
         }

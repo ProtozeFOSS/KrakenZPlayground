@@ -321,6 +321,21 @@ void KrakenAppController::resetAppEngine()
     createContainer();
 }
 
+void KrakenAppController::scheduleRedraw()
+{
+    if(mMode == AppMode::QML_APP) {
+        renderNext();
+    }
+}
+
+void KrakenAppController::setTimerDrawn(bool draw)
+{
+    mActive = draw;
+    if(mActive){
+        renderNext();
+    }
+}
+
 void KrakenAppController::toggleSettings()
 {
     if(mSettings && mCurrentApp) {

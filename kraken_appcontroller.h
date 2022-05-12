@@ -92,6 +92,8 @@ public:
     void setGreenSize(int green_size);
     void setController(KrakenZInterface* controller){ mController = controller; }
     QString loadedPath() { return mLoadedPath; }
+    Q_INVOKABLE void scheduleRedraw();
+    Q_INVOKABLE void setTimerDrawn(bool draw);
 
 
 
