@@ -34,7 +34,6 @@ public slots:
     void setPumpDuty(quint8 duty) override;
     void setImage(QImage, quint8 = 0, bool = true) override;
 
-    // void setMonitorFPS(bool monitor = true) override;
     void setBuiltIn(quint8) override;
     void setNZXTMonitor() override;
     void setRotationOffset(int offset) override;

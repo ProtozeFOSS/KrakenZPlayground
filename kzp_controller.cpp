@@ -22,7 +22,6 @@ static constexpr char PREVIEW_WINDOW[] = "qrc:/qml/PreviewWindow.qml";
 static constexpr char PERMISSION_ERROR[] = "qrc:/qml/PermissionDenied.qml";
 static constexpr char SETTINGS_ERROR[] = "qrc:/qml/SettingsError.qml";
 static constexpr char MISSING_PROFILE[] = "qrc:/qml/MissingProfile.qml";
-static constexpr char EMPTY[] = "";
 
 
 
@@ -34,11 +33,11 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 
 
 KZPController::KZPController(QApplication *parent)
-    : QObject{parent}, mAppliedSettings{false}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
+    : QObject{parent}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr},
       mPreviewWindow{nullptr}, mPreviewX{0}, mPreviewY{0}, mDetached{false}
 {
-    KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::SOFTWARE);
+    KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::HARDWARE);
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
     if(parent){
         QPixmap iconPixmap(":/images/Droplet.png");
@@ -101,21 +100,12 @@ void KZPController::applicationQuiting() // close up shop
     if(mKrakenAppController) {
         mKrakenAppController->closeQmlApplications();
     }
-    if(mState == ApplicationState::BACKGROUND || mState == ApplicationState::FOREGROUND) {
+    if(mState == ApplicationState::BACKGROUND || mState == ApplicationState::FOREGROUND || mState == ApplicationState::DETACHED) {
         writeSettingsFile();
     }
     cleanUp();
 }
 
-
-void KZPController::backgroundContainerReady()
-{
-    if(!mAppliedSettings){
-       // mKrakenAppController->setJsonProfile(mProfile.value("appcontroller").toObject());
-        mAppliedSettings = true;
-
-    }
-}
 
 void KZPController::connectToWindow()
 {
@@ -188,7 +178,7 @@ bool KZPController::createDeviceController()
                     error_obj.insert(TYPE_KEY, mState);
                     error_obj.insert(MSG_KEY, "Software Driver Available");
                     error_obj.insert(ERROR_KEY, OPEN_DENIED_STR);
-                    mSettingsObject.insert("ControllerStatus", error_obj);
+                    mError.insert("ControllerStatus", error_obj);
                     success = false;
                     mController = nullptr;
                 }
@@ -199,7 +189,7 @@ bool KZPController::createDeviceController()
                 QJsonObject error_obj;
                 error_obj.insert(TYPE_KEY, mState);
                 error_obj.insert(MSG_KEY, "Software Driver Available");
-                mSettingsObject.insert("ControllerStatus", error_obj);
+                mError.insert("ControllerStatus", error_obj);
                 mController = nullptr;
             }
         }
@@ -221,39 +211,47 @@ bool KZPController::setSoftwareController()
     if(mKrakenAppController){
         mKrakenAppController->setController(mController);
     }
-    mSettingsObject.remove("ControllerStatus");
+    mError.remove("ControllerStatus");
     return (previousController != mController);
 }
 
 void KZPController::writeSettingsFile()
 {
-//    QFile settingsFile(mSettingsDir + QDir::separator() + SETTINGS_FNAME);
-//    if(settingsFile.open(QFile::WriteOnly)) {
-//        QJsonObject profile;
-//        profile.insert("krakenzdriver", mController->toJsonProfile());
-//        profile.insert("appcontroller", mKrakenAppController->toJsonProfile());
-//        if(mActiveProfile.size() == 0) {
-//            // create default profile
-
-
-//            writeCurrentSettings();
-//        }else {
-//            auto profiles = mSettingsObject.value("profiles").toArray();
-//            auto profileCount = profiles.size();
-//            for(int index{0}; index < profileCount; ++index){
-//                auto profile = profiles.at(index).toObject();
-//                auto name = profile.value("name").toString();
-//                if(name.compare(mProfileName) == 0) { // found startup profile
-//                    auto default_profile = defaultProfileObject();
-//                    default_profile.insert("data", current_settings);
-//                    default_profile.insert("name", mProfileName);
-//                    profiles.replace(index,default_profile);
-//                    mSettingsObject.insert("profiles", profiles);
-//                    writeCurrentSettings();
-//                }
-//            }
-//        }
-  //  }
+    auto filePath{Settings::getSettingsPath(mSettingsDir)};
+    QFile settingsFile(filePath);
+    QString profileName;
+    int state;
+    auto existingSettings = Settings::loadSettings(mSettingsDir,profileName,state,true);
+    existingSettings.remove("activeProfile");
+    if(settingsFile.open(QFile::WriteOnly)) {
+        QJsonObject currentProfile = mProfile;
+        currentProfile.insert("name", profileName);
+        currentProfile.insert("state", mState);
+        if(mController) {
+            currentProfile.insert("krakenzdriver", mController->toJsonProfile());
+        }
+        if(mKrakenAppController) {
+            currentProfile.insert("appcontroller", mKrakenAppController->toJsonProfile());
+        }
+        auto previewData{previewSettings()};
+        currentProfile.insert("preview" , previewData);
+        // find and update it in the array
+        auto profiles = existingSettings.value("profiles").toArray();
+        auto profileCount = profiles.size();
+        for(int index{0}; index < profileCount; ++index){
+            auto profile = profiles.at(index).toObject();
+            auto name = profile.value("name").toString();
+            if(name.compare(profileName) == 0) { // found startup profile
+                profiles.replace(index,currentProfile);
+                existingSettings.remove("profiles");
+                existingSettings.insert("profiles", profiles);
+            }
+        }
+        existingSettings.insert("startProfile", profileName);
+        QJsonDocument doc;
+        doc.setObject(existingSettings);
+        settingsFile.write(doc.toJson());
+    }
 }
 
 bool KZPController::createKrakenApplicationController()
@@ -313,6 +311,17 @@ void KZPController::detachPreview(bool detach)
     }
 }
 
+
+QJsonObject KZPController::previewSettings()
+{
+    QJsonObject preview;
+    preview.insert("x", mPreviewX);
+    preview.insert("y", mPreviewY);
+    preview.insert("detached", mDetached);
+    preview.insert("locked", mLocked);
+    return preview;
+}
+
 void KZPController::processBackgroundFrame(QImage frame)
 {
     if(mController){
@@ -327,7 +336,6 @@ void KZPController::initializeBackend()
     }
     if(!mKrakenAppController){
         if(createKrakenApplicationController()){
-            connect(mKrakenAppController, &KrakenAppController::initialized, this, &KZPController::backgroundContainerReady);
             mKrakenAppController->initialize();
         }
     }
@@ -351,7 +359,30 @@ void KZPController::lockMovement(bool lock)
     }
 }
 
-void KZPController::recordPreviewLocation(quint32 x, quint32 y)
+void KZPController::loadProfile()
+{
+    if(!mProfile.isEmpty() && mProfile.contains("preview")){
+        auto previewSettings = mProfile.value("preview").toObject();
+            auto lValue = previewSettings.value("locked");
+            if(!lValue.isNull()) {
+                mLocked = lValue.toBool();
+            }
+            auto dValue = previewSettings.value("detached");
+            if(!dValue.isNull()) {
+                mDetached = dValue.toBool();
+            }
+            auto xValue = previewSettings.value("x");
+            if(!xValue.isNull()) {
+                mPreviewX = xValue.toDouble();
+            }
+            auto yValue = previewSettings.value("y");
+            if(!yValue.isNull()) {
+                mPreviewY = yValue.toDouble();
+            }
+        }
+}
+
+void KZPController::recordPreviewLocation(qreal x, qreal y)
 {
     mPreviewX = x;
     mPreviewY = y;
@@ -426,7 +457,7 @@ void KZPController::setMainWindow()
             initializeMainWindow();
             qmlFile = PERMISSION_ERROR;
             mUxEngine->rootContext()->setContextProperty("KZP", this);
-            mUxEngine->rootContext()->setContextProperty("ControllerStatus", mSettingsObject.value("ControllerStatus").toObject());
+            mUxEngine->rootContext()->setContextProperty("ControllerStatus", mError.value("ControllerStatus").toObject());
             break;
         }
         case ApplicationState::ERROR_PROFILE_NF: {
@@ -441,7 +472,7 @@ void KZPController::setMainWindow()
         {
             initializeMainWindow();
             qmlFile = SETTINGS_ERROR;
-            mUxEngine->rootContext()->setContextProperty("SettingsStatus", mSettingsObject.value("SettingsStatus").toObject());
+            mUxEngine->rootContext()->setContextProperty("SettingsStatus", mError.value("SettingsStatus").toObject());
             break;
         }
         default: break;
@@ -493,6 +524,7 @@ void KZPController::setSettingsConfiguration(QString directory, QString profile_
 {
     int state{0};
     mActiveProfile = profile_name;
+    mSettingsDir = directory;
     auto settingsOutput = Settings::loadSettings(directory, mActiveProfile, state, userDirectory);
     if(state > ApplicationState::FOREGROUND) {
         mStateBeforeLastError = mState;
@@ -503,10 +535,12 @@ void KZPController::setSettingsConfiguration(QString directory, QString profile_
         case ApplicationState::CONFIGURE_DRIVER: {
             break;
         }
+
         case ApplicationState::BACKGROUND:
-        case ApplicationState::FOREGROUND: {// correctly parsed, load user settings
-            mSettingsObject = settingsOutput;
-            mProfile = mSettingsObject.value("activeProfile").toObject();
+        case ApplicationState::FOREGROUND:
+        case ApplicationState::DETACHED: {// correctly parsed, load user settings
+            mProfile = settingsOutput.value("activeProfile").toObject();
+            settingsOutput.remove("activeProfile");
             initializeBackend();
             // Apply the loaded properties
             if(mController) {
@@ -515,6 +549,7 @@ void KZPController::setSettingsConfiguration(QString directory, QString profile_
             if(mKrakenAppController) {
                 mKrakenAppController->setJsonProfile(mProfile.value("appcontroller").toObject());
             }
+            loadProfile();
             break;
         }
         case ApplicationState::ERROR_DEVICE_NF:
@@ -531,12 +566,11 @@ void KZPController::setSettingsConfiguration(QString directory, QString profile_
         case ApplicationState::ERROR_PROFILES:
         case ApplicationState::ERROR_PARSE_SETTINGS:
         {
-            mSettingsObject.insert("SettingsStatus", settingsOutput);
+            mError.insert("SettingsStatus", settingsOutput);
             break;
         }
         default: break;
     }
-
 }
 
 void KZPController::cleanUp()

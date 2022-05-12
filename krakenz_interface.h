@@ -142,7 +142,6 @@ public slots:
     virtual void setNZXTMonitor(){}
     virtual void setBuiltIn(quint8){}
     virtual void setScreenOrientation(Qt::ScreenOrientation){}
-    virtual void setMonitorFPS(bool = true){}
 };
 
 Q_DECLARE_INTERFACE(KrakenZInterface, "com.application.kzp")

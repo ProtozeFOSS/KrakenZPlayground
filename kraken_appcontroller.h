@@ -39,13 +39,12 @@ class KrakenAppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickItem* container  NOTIFY containerChanged MEMBER mContainer)
-    // Qml "Animation" frameRate, ideally matches near draw rate
     Q_PROPERTY(int frameDelay READ frameDelay WRITE setFrameDelay NOTIFY frameDelayChanged MEMBER mFrameDelay)
     // Screen Size
     Q_PROPERTY(QSize screenSize READ screenSize WRITE setScreenSize NOTIFY screenSizeChanged MEMBER mSize)
     Q_PROPERTY(Qt::ScreenOrientation orientation READ orientation WRITE setOrientation NOTIFY orientationChanged MEMBER mOrientation);
-    // Screen Format
-    Q_PROPERTY(int currentFPS READ currentFPS NOTIFY fpsChanged MEMBER mFPS)
+
+    // Application and preview control
     Q_PROPERTY(AppMode mode READ mode NOTIFY modeChanged MEMBER mMode)
     Q_PROPERTY(bool drawFPS READ drawFPS WRITE setDrawFPS NOTIFY drawFPSChanged MEMBER mDrawFPS)
     Q_PROPERTY(bool showFPS READ showFPS WRITE setShowFPS NOTIFY showFPSChanged MEMBER mShowFPS)
@@ -73,7 +72,6 @@ public:
     bool  animationPlaying() { return mPlaying; }
     QSize screenSize() { return mSize; }
     void  closeQmlApplications();
-    int   currentFPS() { return mFPS; }
     int   depthSize() { return mDepthSize; }
     int   stencilSize() { return mStencilSize; }
     int   alphaSize()  { return mAlphaSize; }
@@ -94,6 +92,12 @@ public:
     void setGreenSize(int green_size);
     void setController(KrakenZInterface* controller){ mController = controller; }
     QString loadedPath() { return mLoadedPath; }
+
+
+
+    // Application Settings API
+    Q_INVOKABLE QJsonObject loadAppSettings();
+    Q_INVOKABLE void        saveAppSettings(QJsonObject);
 
 signals:
     void containerChanged(QQuickItem* container);
@@ -149,7 +153,6 @@ protected:
 
     // controlling the state
     int mFrameDelay;
-    int mFPS;
     bool mInitialized;
     bool mActive;
     AnimationDriver*           mAnimationDriver;
@@ -164,7 +167,6 @@ protected:
     int      mGreenSize;
     QObject* mPrimaryScreen;
     QTimer*  mDelayTimer;
-    QTimer*  mStatusTimer;
     qreal    mDPR;
     AppMode  mMode;
     bool     mDrawFPS;

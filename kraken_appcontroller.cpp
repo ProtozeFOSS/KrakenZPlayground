@@ -18,18 +18,16 @@
 #include <QQuickItem>
 #include <QString>
 #include "krakenz_driver.h"
+#include "settings.h"
 
 KrakenAppController::KrakenAppController(KrakenZInterface *controller, QObject *parent)
     : QObject{parent}, mController{controller}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
-    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mFPS(0), mInitialized(false), mActive(false),
+    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160),mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
-    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mStatusTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE),
+    mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE),
     mDrawFPS(false), mShowFPS{false}, mPlaying(false), mSettings{false}
 {
-    mStatusTimer->setInterval(400);
-    mStatusTimer->setSingleShot(false);
-    //connect(mStatusTimer, &QTimer::timeout, controller, &KrakenZInterface::sendStatusRequest);
     connect(mDelayTimer, &QTimer::timeout, this, &KrakenAppController::renderNext);
 }
 
@@ -293,7 +291,6 @@ void KrakenAppController::renderNext()
     mRenderControl->sync();
     mRenderControl->render();
     mGLContext->functions()->glFlush();
-    ++mFPS;
     emit frameReady(mFBO->toImage());
     QEvent *updateRequest = new QEvent(QEvent::UpdateRequest);
     QCoreApplication::postEvent(this, updateRequest);
@@ -352,15 +349,6 @@ void KrakenAppController::setMode(AppMode mode)
     mMode = mode;
     if(mMode <= AppMode::STATIC_IMAGE) {
         releaseApplication();
-        if(mController){
-            mController->setMonitorFPS(false);
-        }
-        mStatusTimer->start();
-    }else {
-        if(mController){
-            mController->setMonitorFPS();
-        }
-        mStatusTimer->stop();
     }
     emit modeChanged(mode);
 
@@ -442,9 +430,6 @@ bool KrakenAppController::event(QEvent *event)
     if(event->type() == QEvent::UpdateRequest)
     {
         if(mActive) {
-//            if(mController){
-//                mController->sendStatusRequest();
-//            }
             emit draw();
             mDelayTimer->start();
         }
@@ -556,6 +541,34 @@ QJsonObject KrakenAppController::toJsonProfile()
         default:;
     }
     return profile;
+}
+
+QJsonObject KrakenAppController::loadAppSettings()
+{
+    QJsonObject settings;
+    if(mLoadedPath.size()) {
+        auto dirPath = mLoadedPath;
+        if(dirPath.startsWith("file:")) {
+            dirPath.remove(0,8);
+        }
+        auto lastIndex{dirPath.lastIndexOf('/')};
+        dirPath = dirPath.left(lastIndex + 1);
+        settings = Settings::getRootObject(dirPath);
+    }
+    return settings;
+}
+
+void KrakenAppController::saveAppSettings(QJsonObject settings)
+{
+    if(mLoadedPath.size()) {
+        auto dirPath = mLoadedPath;
+        if(dirPath.startsWith("file:")) {
+            dirPath.remove(0,8);
+        }
+        auto lastIndex{dirPath.lastIndexOf('/')};
+        dirPath = dirPath.left(lastIndex + 1);
+        Settings::writeObject(dirPath, settings);
+    }
 }
 
 bool KrakenAppController::loadQmlFile(QString path)

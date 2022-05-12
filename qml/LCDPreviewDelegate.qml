@@ -35,6 +35,7 @@ Rectangle {
         onStatusChanged: {
             if(status == Image.Ready){
                 opacityMask.source = sourceImage0;
+                previewCircle.color = "black"
             }
         }
     }
@@ -51,12 +52,13 @@ Rectangle {
         onStatusChanged: {
             if(status == Image.Ready){
                 opacityMask.source = sourceImage1;
+                previewCircle.color = "black"
             }
         }
     }
     Rectangle{
         id: previewCircle
-        color:"black"
+        color:"transparent"
         anchors.centerIn: parent
         height:320
         width:320
@@ -67,7 +69,6 @@ Rectangle {
         id:opacityMask
         rotation:KrakenZDriver.rotationOffset
         maskSource:previewCircle
-        source: bufferIndex == 0 ? sourceImage0:sourceImage1
         anchors.centerIn: parent
         height:320
         width:320

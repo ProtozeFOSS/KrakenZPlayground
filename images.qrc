@@ -12,5 +12,6 @@
         <file>images/upload.svg</file>
         <file>images/lock.svg</file>
         <file>images/unlock.svg</file>
+        <file>images/settings.svg</file>
     </qresource>
 </RCC>

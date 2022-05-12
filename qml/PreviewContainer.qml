@@ -1,47 +1,52 @@
 import QtQuick 2.15
+import com.application.kzp 1.0
 
 Item {
     id: root
-    property bool isDetached : true
-    property alias contentItem: loader.item
+    property alias contentItem: attachedPreview.item
     property int  radius: 0
     property int  brightness: 50
     property alias previewWindow:previewWindow.item
-    onIsDetachedChanged: {
-        detachTimer.start();
-    }
-    Timer{
-        id:detachTimer
-        interval:2
-        running:false
-        repeat:false
-        onTriggered: {
-            loader.active = false
-            loader.sourceComponent = root.isDetached ? empty : previewComponent
-            loader.active = true
-            previewWindow.active = root.isDetached;
+    Connections{
+        target: KZP
+        function onPreviewDetached(detach : bool) {
+            if(detach !== previewWindow.active){
+                previewWindow.active = detach;
+                attachedPreview.active = !detach;
+            }
         }
     }
+
     onBrightnessChanged: {
-        if(loader.item && !root.isDetached) {
+        if(attachedPreview.item) {
             if(brightness > 50){
-                loader.item.lens.color = "white";
-                loader.item.lens.opacity = brightness/100 - 0.85;
+                attachedPreview.item.lens.color = "white";
+                attachedPreview.item.lens.opacity = brightness/100 - 0.85;
             } else {
-                loader.item.lens.color = "black";
+                attachedPreview.item.lens.color = "black";
                 if(brightness == 0){
-                    loader.item.lens.opacity = 1.0;
+                    attachedPreview.item.lens.opacity = 1.0;
                 }else {
-                    loader.item.lens.opacity = (50 - brightness)/100;
+                    attachedPreview.item.lens.opacity = (50 - brightness)/100;
                 }
             }
         }
     }
 
+
     Loader{
-        id:loader
-        active:true
-        sourceComponent: empty
+        id:attachedPreview
+        active: false
+        anchors.fill:parent
+        sourceComponent: AttachedPreview{ anchors.fill:parent; brightness:root.brightness; visible:false}
+        onStatusChanged: {
+            if(status == Loader.Ready) {
+                item.visible = true;
+                if(AppController.mode === OffscreenApp.GIF_MODE) {
+                    AppController.animationPlaying = true;
+                }
+            }
+        }
     }
     Loader{
         id:previewWindow
@@ -50,39 +55,60 @@ Item {
         onStatusChanged: {
             if(status == Loader.Ready) {
                 previewWindow.item.visible = true;
+                if(AppController.mode === OffscreenApp.GIF_MODE) {
+                    AppController.animationPlaying = true;
+                }
             }
         }
     }
-
-    Component{
-        id: empty
-        Rectangle{
+    Rectangle{
+        anchors.fill: attachedPreview
+        radius:width
+        color:"#22262b"
+        border.width: 2
+        border.color: "#5c5c5c"
+        visible:previewWindow.active
+        Text{
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 24
+            font.family: "Comic Sans MS"
+            text:"Detached Mode"
+            style:Text.Sunken
+            color:"white"
+        }
+    }
+    Rectangle{ // Toggles detached Preview
+        radius:8
+        anchors{
+            top:parent.top
+            right:parent.right
+            margins:8
+        }
+        color: "#252429"
+        height:36
+        width:36
+        Image{
+            height:32
+            width:32
             anchors.centerIn: parent
-            width:root.width
-            height:root.height
-            radius:root.radius
-            color:"#22262b"
-            border.width: 2
-            border.color: "#5c5c5c"
-            Text{
-                anchors.fill: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: 24
-                font.family: "Comic Sans MS"
-                text:"Detached Mode"
-                style:Text.Sunken
-                color:"white"
+            antialiasing: true
+            smooth: true
+            source:!AppController ? "qrc:/images/upload.svg": (KZP.detachedPreview ? "qrc:/images/download.svg":"qrc:/images/upload.svg")
+        }
+        MouseArea{
+            anchors.fill: parent
+            onClicked:{
+                if(AppController.mode === OffscreenApp.GIF_MODE) {
+                    AppController.animationPlaying = false;
+                }
+                KZP.detachedPreview = !KZP.detachedPreview
             }
         }
     }
-    Component{
-        id: previewComponent
-        LCDPreview{
-            anchors.fill:parent
-        }
-    }
-    Component.onCompleted: {
-        detachTimer.start();
+    Component.onCompleted:{
+        previewWindow.active = KZP.detachedPreview;
+        attachedPreview.active = !KZP.detachedPreview;
     }
 }

@@ -45,8 +45,6 @@ public:
 
 public slots:
     void blankScreen() override;
-    void startMonitoringFramerate() override;
-    void stopMonitoringFramerate() override;
     void setBrightness(quint8 brightness) override;
     void setFanDuty(quint8 duty) override;
     void setPumpDuty(quint8 duty) override; // flat
@@ -57,7 +55,6 @@ public slots:
     void setNZXTMonitor() override;
     void setBuiltIn(quint8 index) override;
     void setScreenOrientation(Qt::ScreenOrientation orientation) override;
-    void setMonitorFPS(bool monitor = true) override;
 
 protected slots:
     void receivedControlResponse();
@@ -66,7 +63,6 @@ protected slots:
 protected:
     void parseFWVersion(QByteArray& data);
     void parseStatus(QByteArray& data);
-    void parseDeleteBucket(QByteArray& data);
 
     // Control messages
     void sendBrightness(quint8 brightness);
@@ -106,8 +102,6 @@ protected:
     short               mBufferIndex; // buffer index
     short               mImageIndex; // bucket id
     QTimer              mMeasure;
-    qint64              mBytesLeft;
-    quint64             mBytesSent;
     QImage              mImageOut;
     bool                mApplyAfterSet;
     bool                mWritingImage;

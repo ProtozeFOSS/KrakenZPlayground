@@ -36,10 +36,10 @@ class KZPController : public QObject
     Q_PROPERTY(ApplicationState state READ state NOTIFY stateChanged MEMBER mState)
     Q_PROPERTY(QString activeProfile READ activeProfile NOTIFY profileChanged MEMBER mActiveProfile)
     Q_PROPERTY(QString version READ applicationVersion CONSTANT)
-    Q_PROPERTY(quint32 previewX READ previewX CONSTANT)
-    Q_PROPERTY(quint32 previewY READ previewY CONSTANT)
+    Q_PROPERTY(qreal previewX READ previewX CONSTANT)
+    Q_PROPERTY(qreal previewY READ previewY CONSTANT)
     Q_PROPERTY(bool detachedPreview READ detachedPreview WRITE detachPreview NOTIFY previewDetached MEMBER mDetached)
-    Q_PROPERTY(bool movementLocked READ movementLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
+    Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
 
 public:
     enum ApplicationState{
@@ -63,15 +63,15 @@ public:
     Q_INVOKABLE  void acceptUserAgreement();
     Q_INVOKABLE  void configured();
     bool  detachedPreview() { return mDetached; }
-    bool  movementLocked() { return mLocked; }
+    bool  movementIsLocked() { return mLocked; }
     Q_INVOKABLE  void selectSoftwareDriver();
     const QString activeProfile() { return mActiveProfile; }
     const QString applicationVersion() { return APP_VERSION; }
-    quint32 previewX() { return mPreviewX; }
-    quint32 previewY() { return mPreviewY; }
+    qreal previewX() { return mPreviewX; }
+    qreal previewY() { return mPreviewY; }
     void setSettingsConfiguration(QString directory, QString profile_name, bool userDirectory);
     Q_INVOKABLE void setPreviewWindow(QObject* window);
-    Q_INVOKABLE void recordPreviewLocation(quint32 x, quint32 y);
+    Q_INVOKABLE void recordPreviewLocation(qreal x, qreal y);
 
 signals:
     void containerChanged(QQuickItem* container);
@@ -105,10 +105,12 @@ protected:
     // Settings Members
     QString                       mSettingsDir;
     QString                       mActiveProfile;
-    QJsonObject                   mSettingsObject;
+    QJsonObject                   mError;
     QJsonObject                   mProfile;
     bool                          mAppliedSettings;
     void writeSettingsFile();
+    void loadProfile();
+    QJsonObject previewSettings();
 
 
     QQmlApplicationEngine*        mUxEngine;
@@ -135,8 +137,8 @@ protected:
 
     // Preview Window
     QQuickWindow*                 mPreviewWindow;
-    quint32                       mPreviewX;
-    quint32                       mPreviewY;
+    qreal                         mPreviewX;
+    qreal                         mPreviewY;
     bool                          mDetached;
     bool                          mLocked;
 
@@ -144,7 +146,6 @@ protected slots:
     // When the UX is changed, this method will control what to do
    // void componentReady();
 
-    void backgroundContainerReady();
     void connectToWindow();
     void cleanUpWindow();
     void processBackgroundFrame(QImage frame);

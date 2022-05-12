@@ -13,5 +13,6 @@
         <file>qml/PreviewContainer.qml</file>
         <file>qml/LCDPreview.qml</file>
         <file>qml/PreviewOverlay.qml</file>
+        <file>qml/AttachedPreview.qml</file>
     </qresource>
 </RCC>

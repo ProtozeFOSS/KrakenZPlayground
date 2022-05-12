@@ -14,11 +14,11 @@ Item {
         }
 
         color: "#252429"
-        height:28
-        width:28
+        height:32
+        width:32
         Image{
-            height:24
-            width:24
+            height:30
+            width:30
             anchors.centerIn: parent
             antialiasing: true
             smooth: true
@@ -27,9 +27,11 @@ Item {
         }
         MouseArea{
             anchors.fill: parent
-            onClicked:{
+            onClicked:{                
+                if(AppController.mode === OffscreenApp.GIF_MODE) {
+                    AppController.animationPlaying = false;
+                }
                 KZP.detachPreview(false);
-                delete this;
             }
         }
     }
@@ -43,11 +45,11 @@ Item {
         }
 
         color:KZP.movementLocked ? "#252429":"red"
-        height:28
-        width:28
+        height:32
+        width:32
         Image{
-            height:24
-            width:24
+            height:30
+            width:30
             anchors.centerIn: parent
             antialiasing: true
             smooth: true
@@ -62,7 +64,7 @@ Item {
         }
     }
 
-    Rectangle{ // Attach to main winodw, or enter background mode
+    Rectangle{ // Toggle application settings, if they exist
         radius:2
         anchors{
             top:parent.top
@@ -72,15 +74,15 @@ Item {
         visible:AppController.hasSettings
         enabled:visible
         color: "#252429"
-        height:28
-        width:28
+        height:32
+        width:32
         Image{
-            height:18
-            width:18
+            height:30
+            width:30
             anchors.centerIn: parent
             antialiasing: true
             smooth: true
-            source:"qrc:/images/lock.svg"
+            source:"qrc:/images/settings.svg"
         }
         MouseArea{
             anchors.fill: parent
@@ -91,21 +93,20 @@ Item {
         }
     }
 
-    Rectangle{
+    Rectangle{ // Play and pause button
         radius:2
         anchors{
             bottom:parent.bottom
             left:parent.left
             margins:1
         }
-        color: "#a8a7a7"
-        height:28
-        width:28
+        color: "#252429"
+        height:32
+        width:32
         visible:AppController.mode === OffscreenApp.GIF_MODE
         Image{
-            id: ppIcon
-            height: 24
-            width:24
+            height: 30
+            width:30
             anchors.centerIn: parent
             source: AppController.animationPlaying ?  "qrc:/images/pause.svg" : "qrc:/images/play.svg"
             antialiasing: true

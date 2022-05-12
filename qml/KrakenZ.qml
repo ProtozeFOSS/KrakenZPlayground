@@ -232,7 +232,6 @@ Window {
         }
         PreviewContainer{
             id:previewContainer
-            isDetached: KZP ? KZP.detachedPreview : false
             anchors{
                 top: pumpSpeedLabel.top
                 right: parent.right
@@ -244,7 +243,7 @@ Window {
             layer.enabled:true
             layer.effect:DropShadow{
                 transparentBorder: true
-                source:previewContainer.contentItem ? previewContainer.contentItem:undefined
+                source:previewContainer
                 anchors.fill: previewContainer
                 horizontalOffset: 2
                 verticalOffset: 10
@@ -254,58 +253,6 @@ Window {
                 color: "#000000"
             }
         }
-
-
-        Image{
-            height:36
-            width:36
-            enabled: AppController.mode >= OffscreenApp.STATIC_IMAGE
-            visible:enabled
-            anchors{
-                bottom:previewContainer.top
-                left:previewContainer.right
-                margins:-42
-            }
-            antialiasing: true
-            smooth: true
-            source:!AppController ? "qrc:/images/upload.svg": (KZP.detachedPreview ? "qrc:/images/download.svg":"qrc:/images/upload.svg")
-            MouseArea{
-                anchors.fill: parent
-                onClicked:{
-                    KZP.detachPreview(!KZP.detachedPreview)
-                }
-            }
-        }
-
-        Rectangle{
-            width:48
-            height:width
-            radius:width
-            visible:AppController.mode === OffscreenApp.GIF_MODE
-            anchors{
-                bottom:previewContainer.bottom
-                right:previewContainer.right
-                rightMargin: 8
-            }
-            Image{
-                id: ppIcon
-                height: 32
-                width:32
-                anchors.centerIn: parent
-                source: AppController.animationPlaying ?  "qrc:/images/pause.svg" : "qrc:/images/play.svg"
-                antialiasing: true
-                smooth: true
-            }
-
-            color:"white"
-            MouseArea{
-                anchors.fill: parent
-                onClicked: {
-                    AppController.animationPlaying = !AppController.animationPlaying
-                }
-            }
-        }
-
         Rectangle{
             id: options
             visible: AppController.mode >= OffscreenApp.GIF_MODE
@@ -890,6 +837,7 @@ Window {
             live:true
             from: 0
             to: 270
+            value: KrakenZDriver ? KrakenZDriver.rotationOffset:0
             stepSize:unlockRotation.checked ? 90:1
             handle:Rectangle{
                 color: "#655e71"
@@ -1166,8 +1114,25 @@ Window {
             orientation: ListView.Horizontal
             model: actionModel
         }
+
+        Text{
+            anchors{
+                bottom:parent.bottom
+                right:parent.right
+                bottomMargin:3
+                rightMargin:6
+            }
+            color:"white"
+            font.bold: true
+            font.pixelSize: 14
+            text:KZP.version
+        }
+
         Component.onCompleted:{
             unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
+            window.flags += (Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowStaysOnTopHint |
+                             Qt.WindowSystemMenuHint | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint)
+            window.raise()
         }
     }
 }

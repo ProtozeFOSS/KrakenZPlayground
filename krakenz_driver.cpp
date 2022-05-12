@@ -11,22 +11,6 @@
 const int _WRITE_LENGTH = 64;
 const int _WRITE_BULK_LENGTH = 512;
 const quint16 _MAX_MEMORY_SLOTS = 53255;
-const quint16 _SLOTS_PER_INDEX = 36865;
-
-constexpr char ID_TIMESTAMP[] = "TIME";
-constexpr char ID_TYPE[] = "TYPE";
-constexpr char ID_MESSAGE[] = "MESSAGE";
-constexpr char ID_TARGET[] = "TARGET";
-constexpr char ID_SESSION[] = "SESSION";
-constexpr char ID_BUCKET[] = "BUCKET";
-constexpr char ID_ASSET[] = "ASSET";
-constexpr char ID_MODE[] = "MODE";
-constexpr char ID_RAW[] = "RAW";
-constexpr char ID_VALID[] = "VALID";
-constexpr char ID_RECV[] = "RECEIVED";
-constexpr char ID_MEMORY_START[] = "MEMORY_START";
-constexpr char ID_MEMORY_SLOTS[] = "MEMORY_SLOTS";
-
 constexpr quint8 CRITICAL_TEMP = 59;
 
 union CHANNEL_SPEED
@@ -37,7 +21,7 @@ union CHANNEL_SPEED
 
 KrakenZDriver::KrakenZDriver(QObject *parent, quint16 VID, quint16 PID)
     : KrakenZInterface(parent), mFound(false), mInitialized(false), mKrakenDevice(nullptr), mLCDDATA(nullptr), mLCDCTL(nullptr), mLCDIN(nullptr), mLiquidTemp(0), mFanSpeed(0),
-      mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mBufferIndex(-1), mImageIndex(1), mBytesLeft(0), mBytesSent(0), mApplyAfterSet(false), mWritingImage(true), mFrames(0), mFPS(0)
+      mPumpSpeed(0), mBrightness(50), mRotationOffset(0), mBufferIndex(-1), mImageIndex(1), mApplyAfterSet(false), mWritingImage(false), mFrames(0), mFPS(0)
 {
     QUsb usb;
     auto devices = usb.devices();
@@ -61,11 +45,11 @@ void KrakenZDriver::blankScreen()
     sendSwitchBucket(0,0);
 }
 
-
 quint16 KrakenZDriver::calculateMemoryStart(quint8 index)
 {
     return 800*index; // needs to be 400 - check what the 3401 (query of the assets after they are set)
 }
+
 
 void KrakenZDriver::closeConnections()
 {
@@ -73,9 +57,9 @@ void KrakenZDriver::closeConnections()
         mLCDCTL->close();
         mLCDDATA->close();
         mLCDIN->close();
-        QObject::disconnect(mLCDCTL);
-        QObject::disconnect(mLCDDATA);
-        QObject::disconnect(mLCDIN);
+        mLCDCTL->disconnect();
+        mLCDDATA->disconnect();
+        mLCDIN->disconnect();
         delete mLCDCTL;
         mLCDCTL = nullptr;
         delete mLCDDATA;
@@ -113,6 +97,10 @@ bool KrakenZDriver::initialize(bool& permissionDenied)
                     QTimer::singleShot(600, this, &KrakenZDriver::sendFWRequest);
                     mInitialized = true;
                     success = true;
+                    mFrames = 0;
+                    mFPS = 0;
+                    mMeasure.start(1000);
+                    emit fpsChanged(mFPS);
                 }
             }
         }
@@ -153,79 +141,53 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     if(index == mImageIndex){
         index = 0 == index ? 1:0;
     }
+    mWritingImage = true;
     mImageIndex = index;
     emit bucketChanged(mImageIndex);
     sendQueryBucket(mImageIndex);
-    mLCDCTL->waitForBytesWritten(1000);
+    mLCDCTL->waitForBytesWritten(100);
     sendDeleteBucket(mImageIndex);
-    mLCDCTL->waitForBytesWritten(1000);
+    mLCDCTL->waitForBytesWritten(100);
     auto byteCount = image.sizeInBytes();
     sendSetupBucket(mImageIndex, mImageIndex + 1, calculateMemoryStart(mImageIndex) , 400);
-    mLCDCTL->waitForBytesWritten(1000);
+    mLCDCTL->waitForBytesWritten(100);
     sendWriteStartBucket(mImageIndex);
-    mLCDCTL->waitForBytesWritten(1000);
+    mLCDCTL->waitForBytesWritten(100);
     sendBulkDataInfo(2, byteCount);
     mLCDDATA->waitForBytesWritten(1);
     mLCDDATA->writeDataSynchronous(reinterpret_cast<const char*>(image.constBits()), byteCount);
     mLCDDATA->waitForBytesWritten(1);
     sendWriteFinishBucket(index);
-    mLCDCTL->waitForBytesWritten(1000);
+    mLCDCTL->waitForBytesWritten(100);
     ++mFrames;
+    mWritingImage = false;
     if(applyAfterSet) {
         sendSwitchBucket(index);
-        mLCDCTL->waitForBytesWritten(1000);
+        mLCDCTL->waitForBytesWritten(100);
     }
 }
 
 void KrakenZDriver::setNZXTMonitor()
 {
-    setMonitorFPS(false);
     sendSwitchBucket(0,2);
 }
 
 void KrakenZDriver::setBuiltIn(quint8 index)
 {
-    setMonitorFPS(false);
     sendSwitchBucket(index,1);
-}
-
-void KrakenZDriver::startMonitoringFramerate()
-{
-    mFrames = 0;
-    mFPS = 0;
-    emit fpsChanged(mFPS);
-    mMeasure.start(1000);
-}
-
-void KrakenZDriver::stopMonitoringFramerate()
-{
-    mMeasure.stop();
-    mFrames = 0;
-    mFPS = 0;
-    emit fpsChanged(mFPS);
 }
 
 void KrakenZDriver::updateFramerate()
 {
-
+    if(!mWritingImage) {
+        sendStatusRequest();
+    }
     mFPS += mFrames;
     mFrames = 0;
     mFPS = (mFPS/2);
     emit fpsChanged(mFPS);
 }
 
-
-void KrakenZDriver::parseDeleteBucket(QByteArray &data)
-{
-
-    qDebug() << "magic_1:" << data.left(2).toHex() << ",";
-    qDebug() << "magic_2:" << data.mid(2,12).toHex() << ",";
-    qDebug() << "bucket_id:" << data.mid(14,1).toHex() << ",";
-    qDebug() << "asset_id:" << data.mid(15, 1).toHex()  << ",";
-    qDebug() << "mode:" << data.mid(16, 1).toHex()  << ",";
-    qDebug() << "start_memory_slot:" << data.mid(17, 2).toHex()  << ",";
-    qDebug() << "number_of_memory_slot:" << data.mid(19, 2).toHex();
-}
 
 void KrakenZDriver::parseFWVersion(QByteArray &data)
 {
@@ -302,7 +264,6 @@ void KrakenZDriver::sendBrightness(quint8 brightness)
     request_set_duty[2] = SET_BUCKET;
     request_set_duty[3] = brightness;
     mLCDCTL->write(request_set_duty);
-
 }
 
 void KrakenZDriver::setFanDuty(quint8 duty)
@@ -356,17 +317,6 @@ void KrakenZDriver::setPumpDuty(quint8 duty)
         memset(&set_pump.data()[4], duty, 44);
         mLCDCTL->write(set_pump);
         mLCDCTL->waitForBytesWritten(1000);
-    }
-}
-
-void KrakenZDriver::setMonitorFPS(bool monitor)
-{
-    if(mMeasure.isActive() != monitor) {
-        if(monitor) {
-            startMonitoringFramerate();
-        } else {
-            stopMonitoringFramerate();
-        }
     }
 }
 
@@ -635,7 +585,6 @@ void KrakenZDriver::receivedControlResponse()
    if(data.size() == 0)
        return;
    auto CMD = quint8(data[0]);
-
 
    switch(CMD){
        case RESPONSE_VERSION:

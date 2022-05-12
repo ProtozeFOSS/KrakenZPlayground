@@ -1,8 +1,10 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtGraphicalEffects 1.15
+import com.application.kzp 1.0
+
 Window {
-    id:window
+    id:previewWindow
     width: 320
     height:320
     visible: true
@@ -13,10 +15,11 @@ Window {
     x:KZP.previewX;
     y:KZP.previewY;
     color:"transparent"
+    transientParent: null
     property alias overlay: overlayLoader.item
     property alias brightness: lcdPreview.brightness
     property alias preview:lcdPreview
-    flags: Qt.FramelessWindowHint | Qt.WindowStaysOnBottomHint | Qt.WA_TranslucentBackground
+    flags: Qt.FramelessWindowHint |  Qt.WA_TranslucentBackground
     LCDPreview{
         id:lcdPreview
         anchors.fill: parent
@@ -71,8 +74,10 @@ Window {
             overlayLoader.active = false;
         }
     }
+
     Component.onCompleted: {
-        KZP.setPreviewWindow(this);
         hideOverlay.start();
+        KZP.setPreviewWindow(this);
+        previewWindow.flags += (KZP.state === KZPController.DETACHED ? Qt.WindowStaysOnBottomHint : Qt.WindowStaysOnTopHint)
     }
 }
