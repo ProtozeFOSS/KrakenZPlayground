@@ -35,7 +35,7 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 KZPController::KZPController(QApplication *parent)
     : QObject{parent}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr},
-      mPreviewWindow{nullptr}, mPreviewX{0}, mPreviewY{0}, mDetached{false}
+      mPreviewWindow{nullptr}, mPreview{this}
 {
     KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::HARDWARE);
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
@@ -44,6 +44,7 @@ KZPController::KZPController(QApplication *parent)
         mApplicationIcon = iconPixmap;
         parent->setWindowIcon(mApplicationIcon);
     }
+    connect(&mPreview, &PreviewWindow::detachChanged, this, &KZPController::detachPreview);
 }
 
 void KZPController::acceptUserAgreement()
@@ -94,12 +95,10 @@ void KZPController::applicationInitialize()
 
 void KZPController::applicationQuiting() // close up shop
 {
-    if(mController && mController->initialized() && mState >= ApplicationState::BACKGROUND) { // add setting for on exit
-        mController->setNZXTMonitor();
-    }
     if(mKrakenAppController) {
         mKrakenAppController->closeQmlApplications();
     }
+
     if(mState == ApplicationState::BACKGROUND || mState == ApplicationState::FOREGROUND || mState == ApplicationState::DETACHED) {
         writeSettingsFile();
     }
@@ -144,12 +143,13 @@ void KZPController::createSystemTray()
 }
 
 void KZPController::moveToBackground()
-{
+{    
+    mPreview.showSettings(false);
     if(mState <= ApplicationState::BACKGROUND) {
         QApplication::exit(0);
         return;
     }
-    if(mKrakenAppController && mDetached){ // moving to detached
+    if(mKrakenAppController && mPreview.mDetached){ // moving to detached
         mState = ApplicationState::DETACHED;
     }else{
         mState = ApplicationState::BACKGROUND;
@@ -260,7 +260,7 @@ bool KZPController::createKrakenApplicationController()
     auto appPtr{ qobject_cast<QApplication*>(parent())};
     if(appPtr && !mKrakenAppController) {
         // Create the Background Application Controller
-        mKrakenAppController =  new KrakenAppController(mController, appPtr);
+        mKrakenAppController =  new KrakenAppController(&mPreview, mController, appPtr);
         mKrakenAppController->setAlphaSize(8); // Configured for Kraken Device, could be adapted to other displays...
         mKrakenAppController->setBlueSize(8);
         mKrakenAppController->setDepthSize(32);
@@ -283,42 +283,39 @@ bool KZPController::createKrakenApplicationController()
 
 void KZPController::detachPreview(bool detach)
 {
-    if(mDetached != detach) {
-        mDetached = detach;
-        switch(mState) {
-            case ApplicationState::FOREGROUND:{
-                if(!mDetached) {
-                    mPreviewWindow = nullptr;
-                }
-                break;
-            }
-            case ApplicationState::BACKGROUND: {
-                if(mDetached){
-                    mState = ApplicationState::DETACHED;
-                    setMainWindow();
-                }
-                break;
-            }
-            case ApplicationState::DETACHED:{
-                if(!mDetached){
-                    mState = ApplicationState::BACKGROUND;
-                    setMainWindow();
-                }
-            }
-            default:;
+    switch(mState) {
+    case ApplicationState::FOREGROUND:{
+        if(!detach) {
+            mPreviewWindow = nullptr;
         }
-        emit previewDetached(detach);
+        break;
     }
+    case ApplicationState::BACKGROUND: {
+        if(detach){
+            mState = ApplicationState::DETACHED;
+            setMainWindow();
+        }
+        break;
+    }
+    case ApplicationState::DETACHED:{
+        if(!detach){
+            mState = ApplicationState::BACKGROUND;
+            setMainWindow();
+        }
+    }
+    default:;
+    }
+
 }
 
 
 QJsonObject KZPController::previewSettings()
 {
     QJsonObject preview;
-    preview.insert("x", mPreviewX);
-    preview.insert("y", mPreviewY);
-    preview.insert("detached", mDetached);
-    preview.insert("locked", mLocked);
+    preview.insert("x", mPreview.mX);
+    preview.insert("y", mPreview.mY);
+    preview.insert("detached", mPreview.mDetached);
+    preview.insert("locked", mPreview.mLocked);
     return preview;
 }
 
@@ -351,13 +348,6 @@ bool KZPController::initializeMainWindow()
     return created;
 }
 
-void KZPController::lockMovement(bool lock)
-{
-    if(lock != mLocked) {
-        mLocked = lock;
-        emit movementLocked(lock);
-    }
-}
 
 void KZPController::loadProfile()
 {
@@ -365,27 +355,21 @@ void KZPController::loadProfile()
         auto previewSettings = mProfile.value("preview").toObject();
             auto lValue = previewSettings.value("locked");
             if(!lValue.isNull()) {
-                mLocked = lValue.toBool();
+                mPreview.mLocked = lValue.toBool();
             }
             auto dValue = previewSettings.value("detached");
             if(!dValue.isNull()) {
-                mDetached = dValue.toBool();
+                mPreview.mDetached = dValue.toBool();
             }
             auto xValue = previewSettings.value("x");
             if(!xValue.isNull()) {
-                mPreviewX = xValue.toDouble();
+                mPreview.mX = xValue.toDouble();
             }
             auto yValue = previewSettings.value("y");
             if(!yValue.isNull()) {
-                mPreviewY = yValue.toDouble();
+                mPreview.mY = yValue.toDouble();
             }
         }
-}
-
-void KZPController::recordPreviewLocation(qreal x, qreal y)
-{
-    mPreviewX = x;
-    mPreviewY = y;
 }
 
 void KZPController::setPreviewWindow(QObject* window)
@@ -395,8 +379,8 @@ void KZPController::setPreviewWindow(QObject* window)
     }
     mPreviewWindow = qobject_cast<QQuickWindow*>(window);
     if(mPreviewWindow) {
-        mPreviewWindow->setProperty("x", mPreviewX);
-        mPreviewWindow->setProperty("y", mPreviewY);
+        mPreviewWindow->setProperty("x", mPreview.mX);
+        mPreviewWindow->setProperty("y", mPreview.mY);
         connect(mPreviewWindow, &QQuickItem::destroyed, this, [this](){
            mPreviewWindow = nullptr;
         });
@@ -484,13 +468,15 @@ void KZPController::setMainWindow()
 }
 
 void KZPController::releaseMainWindow()
-{
+{    
+    mPreview.showSettings(false);
     if(mUxEngine) {
         auto objects = mUxEngine->rootObjects();
         for(auto & object : objects ){
             object->deleteLater();
         }
         QTimer::singleShot(10, this, &KZPController::cleanUpWindow);
+
     }
 }
 
@@ -499,6 +485,7 @@ void KZPController::setUxObjects()
     if(!mUxEngine->imageProvider("krakenz")){
         auto previewProvider {new ProxyImageProvider()}; // uses preview
         mUxEngine->rootContext()->setContextProperty("KZP", this);
+        mUxEngine->rootContext()->setContextProperty("Preview", &mPreview);
         mUxEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
         mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
         mUxEngine->addImageProvider("krakenz", previewProvider); // will be owned by the engine

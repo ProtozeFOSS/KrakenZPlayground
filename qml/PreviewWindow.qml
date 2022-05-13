@@ -12,14 +12,26 @@ Window {
     minimumWidth:320
     maximumHeight:320
     maximumWidth: 320
-    x:KZP.previewX;
-    y:KZP.previewY;
     color:"transparent"
     transientParent: null
     property alias overlay: overlayLoader.item
-    property alias brightness: lcdPreview.brightness
     property alias preview:lcdPreview
     flags: Qt.FramelessWindowHint |  Qt.WA_TranslucentBackground
+    onVisibleChanged: {
+        if(!visible) {
+            Preview.showSettings(false);
+        }
+    }
+    onVisibilityChanged: {
+        if(visibility === Window.Hidden) {
+            Preview.showSettings(false);
+        }
+    }
+
+    Component.onDestruction: {
+        Preview.showSettings(false);
+    }
+
     LCDPreview{
         id:lcdPreview
         anchors.fill: parent
@@ -42,10 +54,11 @@ Window {
 
             onPositionChanged:
             {
-                if(!KZP.movementLocked) {
+                if(!Preview.movementLocked) {
                     previewWindow.x = previewWindow.x + mouse.x - m_x
                     previewWindow.y = previewWindow.y + mouse.y - m_y
-                    KZP.recordPreviewLocation(previewWindow.x, previewWindow.y);
+                    previewWindow.raise();
+                    Preview.setPosition(previewWindow.x, previewWindow.y);
                 }
             }
         }
@@ -76,8 +89,9 @@ Window {
     }
 
     Component.onCompleted: {
+        previewWindow.x = Preview.x;
+        previewWindow.y = Preview.y;
         hideOverlay.start();
         KZP.setPreviewWindow(this);
-        previewWindow.flags += (KZP.state === KZPController.DETACHED ? Qt.WindowStaysOnBottomHint : Qt.WindowStaysOnTopHint)
     }
 }

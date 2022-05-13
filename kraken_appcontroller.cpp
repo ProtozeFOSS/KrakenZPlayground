@@ -20,8 +20,8 @@
 #include "krakenz_driver.h"
 #include "settings.h"
 
-KrakenAppController::KrakenAppController(KrakenZInterface *controller, QObject *parent)
-    : QObject{parent}, mController{controller}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
+KrakenAppController::KrakenAppController(QObject* preview, KrakenZInterface *controller, QObject *parent)
+    : QObject{parent}, mPreview{preview}, mController{controller}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
     mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160),mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
@@ -114,6 +114,7 @@ void KrakenAppController::containerComponentReady()
         if(mPrimaryScreen){
             mAppEngine->rootContext()->setContextProperty("PrimaryScreen", mPrimaryScreen);
         }
+        mAppEngine->rootContext()->setContextProperty("PreviewWindow", mPreview);
         mAppEngine->rootContext()->setContextProperty("AppController", this);
         mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
         mContainer = qobject_cast<QQuickItem*>(mContainerComponent->create());
@@ -312,6 +313,7 @@ void KrakenAppController::resetAppEngine()
     if(mPrimaryScreen){
         mAppEngine->rootContext()->setContextProperty("PrimaryScreen", mPrimaryScreen);
     }
+    mAppEngine->rootContext()->setContextProperty("PreviewWindow", mPreview);
     mAppEngine->rootContext()->setContextProperty("AppController", this);
     mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
 
@@ -333,13 +335,6 @@ void KrakenAppController::setTimerDrawn(bool draw)
     mActive = draw;
     if(mActive){
         renderNext();
-    }
-}
-
-void KrakenAppController::toggleSettings()
-{
-    if(mSettings && mCurrentApp) {
-        mCurrentApp->setProperty("settings", !mCurrentApp->property("settings").toBool());
     }
 }
 

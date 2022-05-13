@@ -31,7 +31,7 @@ Item {
                 if(AppController.mode === OffscreenApp.GIF_MODE) {
                     AppController.animationPlaying = false;
                 }
-                KZP.detachPreview(false);
+                Preview.detachPreview(false);
             }
         }
     }
@@ -44,7 +44,7 @@ Item {
             margins:1
         }
 
-        color:KZP.movementLocked ? "#252429":"red"
+        color:Preview.movementLocked ? "#252429":"red"
         height:32
         width:32
         Image{
@@ -53,12 +53,12 @@ Item {
             anchors.centerIn: parent
             antialiasing: true
             smooth: true
-            source: KZP.movementLocked ? "qrc:/images/unlock.svg":"qrc:/images/lock.svg"
+            source: Preview.movementLocked ? "qrc:/images/unlock.svg":"qrc:/images/lock.svg"
         }
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                KZP.lockMovement(!KZP.movementLocked);
+                Preview.lockMovement(!Preview.movementLocked);
                 root.restartHideTimer()
             }
         }
@@ -87,7 +87,7 @@ Item {
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                AppController.toggleSettings();
+                Preview.settingsOpen = !Preview.settingsOpen;
                 root.restartHideTimer()
             }
         }

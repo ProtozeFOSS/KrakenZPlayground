@@ -30,16 +30,84 @@ constexpr char APP_VERSION[] = "v1.2RC";
 
 // Settings Manager logic became redundant and was rolled in
 
+
+class PreviewWindow : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(qreal x READ x NOTIFY xChanged MEMBER mX)
+    Q_PROPERTY(qreal y READ y NOTIFY yChanged MEMBER mY)
+    Q_PROPERTY(bool detached READ detached WRITE detachPreview NOTIFY detachChanged MEMBER mDetached)
+    Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
+    Q_PROPERTY(bool settingsOpen READ settingsOpen WRITE showSettings NOTIFY settingsToggled MEMBER mSettings)
+public:
+
+    qreal x() { return mX; }
+    qreal y() { return mY; }
+    bool  detached() { return mDetached; }
+    bool  movementIsLocked() { return mLocked; }
+    bool  settingsOpen() { return mSettings; }
+
+    PreviewWindow(QObject* parent = nullptr): QObject{parent}, mX{0}, mY{0}, mDetached{false}, mLocked{false}, mSettings{false} {}
+    ~PreviewWindow() = default;
+
+    friend class KZPController;
+
+signals:
+    void xChanged(qreal x);
+    void yChanged(qreal y);
+    void detachChanged(bool detach); // true is detached, false is docked
+    void movementLocked(bool locked);
+    void settingsToggled(bool open);
+
+public slots:
+    void setPosition(qreal x, qreal y) {
+        if(x != mX) {
+            mX = x;
+            emit xChanged(x);
+        }
+        if(y != mY) {
+            mY = y;
+            emit yChanged(y);
+        }
+    }
+    void detachPreview(bool detach)
+    {
+        showSettings(false);
+        if(detach != mDetached) {
+            mDetached = detach;
+            emit detachChanged(detach);
+        }
+    }
+    void lockMovement(bool lock)
+    {
+        if(lock != mLocked) {
+            mLocked = lock;
+            emit movementLocked(lock);
+        }
+    }
+    void showSettings(bool show)
+    {
+        if(show != mSettings) {
+            mSettings = show;
+            emit settingsToggled(show);
+        }
+    }
+
+protected:
+    qreal                         mX;
+    qreal                         mY;
+    bool                          mDetached;
+    bool                          mLocked;
+    bool                          mSettings;
+};
+
+
 class KZPController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(ApplicationState state READ state NOTIFY stateChanged MEMBER mState)
     Q_PROPERTY(QString activeProfile READ activeProfile NOTIFY profileChanged MEMBER mActiveProfile)
     Q_PROPERTY(QString version READ applicationVersion CONSTANT)
-    Q_PROPERTY(qreal previewX READ previewX CONSTANT)
-    Q_PROPERTY(qreal previewY READ previewY CONSTANT)
-    Q_PROPERTY(bool detachedPreview READ detachedPreview WRITE detachPreview NOTIFY previewDetached MEMBER mDetached)
-    Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
 
 public:
     enum ApplicationState{
@@ -62,22 +130,16 @@ public:
     ApplicationState state() { return mState; }
     Q_INVOKABLE  void acceptUserAgreement();
     Q_INVOKABLE  void configured();
-    bool  detachedPreview() { return mDetached; }
-    bool  movementIsLocked() { return mLocked; }
     Q_INVOKABLE  void selectSoftwareDriver();
     const QString activeProfile() { return mActiveProfile; }
     const QString applicationVersion() { return APP_VERSION; }
-    qreal previewX() { return mPreviewX; }
-    qreal previewY() { return mPreviewY; }
     void setSettingsConfiguration(QString directory, QString profile_name, bool userDirectory);
     Q_INVOKABLE void setPreviewWindow(QObject* window);
-    Q_INVOKABLE void recordPreviewLocation(qreal x, qreal y);
 
 signals:
     void containerChanged(QQuickItem* container);
     void errorOccurred(QString error_message);
-    void previewDetached(bool detached); // true is detached, false is docked
-    void movementLocked(bool locked);
+
 
     // Settings UX Signals
     void profileAdded(QString name);
@@ -96,9 +158,8 @@ public slots:
 
     // Handle QApplication logic
     void applicationInitialize();
-    void detachPreview(bool detached);
-    void lockMovement(bool lock);
     void applicationQuiting();
+    void detachPreview(bool detach);
 
 
 protected:
@@ -108,9 +169,10 @@ protected:
     QJsonObject                   mError;
     QJsonObject                   mProfile;
     bool                          mAppliedSettings;
-    void writeSettingsFile();
-    void loadProfile();
-    QJsonObject previewSettings();
+
+    void         loadProfile();
+    QJsonObject  previewSettings();
+    void         writeSettingsFile();
 
 
     QQmlApplicationEngine*        mUxEngine;
@@ -131,16 +193,11 @@ protected:
     QIcon                         mApplicationIcon;
     SystemTray*                   mSystemTray;
     void createSystemTray();
-
     void cleanUp(); // clean it all up
-
 
     // Preview Window
     QQuickWindow*                 mPreviewWindow;
-    qreal                         mPreviewX;
-    qreal                         mPreviewY;
-    bool                          mDetached;
-    bool                          mLocked;
+    PreviewWindow                 mPreview;
 
 protected slots:
     // When the UX is changed, this method will control what to do

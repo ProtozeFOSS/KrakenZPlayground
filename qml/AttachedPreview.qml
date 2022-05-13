@@ -25,7 +25,7 @@ LCDPreview{
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                AppController.toggleSettings();
+                Preview.showSettings(!Preview.settingsOpen);
             }
         }
     }

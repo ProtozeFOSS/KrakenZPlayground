@@ -53,7 +53,7 @@ class KrakenAppController : public QObject
     Q_PROPERTY(bool hasSettings READ hasSettings NOTIFY hasSettingsChanged MEMBER mSettings)
 
 public:
-    KrakenAppController(KrakenZInterface* controller, QObject* parent = nullptr);
+    KrakenAppController(QObject* preview, KrakenZInterface* controller, QObject* parent = nullptr);
     ~KrakenAppController();
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
@@ -65,8 +65,6 @@ public:
     Q_INVOKABLE QJsonObject toJsonProfile();
     Q_INVOKABLE void setOrientationFromAngle(int angle);
     Q_INVOKABLE QString getLocalFolderPath(QString path);
-    Q_INVOKABLE void toggleSettings();
-
 
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
@@ -138,6 +136,7 @@ protected slots:
     void renderNext();
 
 protected:
+    QObject*          mPreview;
     KrakenZInterface* mController;
     QQuickItem*       mContainer;
     QQuickItem*       mCurrentApp;

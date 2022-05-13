@@ -8,8 +8,8 @@ Item {
     property int  brightness: 50
     property alias previewWindow:previewWindow.item
     Connections{
-        target: KZP
-        function onPreviewDetached(detach : bool) {
+        target: Preview
+        function onDetachChanged(detach : bool) {
             if(detach !== previewWindow.active){
                 previewWindow.active = detach;
                 attachedPreview.active = !detach;
@@ -51,7 +51,7 @@ Item {
     Loader{
         id:previewWindow
         active: false
-        sourceComponent: PreviewWindow{ brightness:root.brightness; visible:false}
+        sourceComponent: PreviewWindow{visible:false}
         onStatusChanged: {
             if(status == Loader.Ready) {
                 previewWindow.item.visible = true;
@@ -95,7 +95,7 @@ Item {
             anchors.centerIn: parent
             antialiasing: true
             smooth: true
-            source:!AppController ? "qrc:/images/upload.svg": (KZP.detachedPreview ? "qrc:/images/download.svg":"qrc:/images/upload.svg")
+            source:!AppController ? "qrc:/images/upload.svg": (Preview.detached ? "qrc:/images/download.svg":"qrc:/images/upload.svg")
         }
         MouseArea{
             anchors.fill: parent
@@ -103,12 +103,12 @@ Item {
                 if(AppController.mode === OffscreenApp.GIF_MODE) {
                     AppController.animationPlaying = false;
                 }
-                KZP.detachedPreview = !KZP.detachedPreview
+                Preview.detached = !Preview.detached
             }
         }
     }
     Component.onCompleted:{
-        previewWindow.active = KZP.detachedPreview;
-        attachedPreview.active = !KZP.detachedPreview;
+        previewWindow.active = Preview.detached;
+        attachedPreview.active = !Preview.detached;
     }
 }
