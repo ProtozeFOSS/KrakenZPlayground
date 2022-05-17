@@ -8,20 +8,18 @@ Window {
     width: 320
     height:320
     visible: true
-    minimumHeight: 320
-    minimumWidth:320
-    maximumHeight:320
-    maximumWidth: 320
     color:"transparent"
     transientParent: null
-    property alias overlay: overlayLoader.item
-    property alias preview:lcdPreview
-    flags: Qt.FramelessWindowHint |  Qt.WA_TranslucentBackground
-    onVisibleChanged: {
-        if(!visible) {
-            Preview.showSettings(false);
+    flags: Qt.FramelessWindowHint |  Qt.WA_TranslucentBackground | Qt.WindowStaysOnBottomHint
+    property int windowOffsetX:0
+    property int windowOffsetY:0
+    Connections{
+        target:Preview
+        function onSettingsToggled(toggled) {
+            previewMode.active = !(settingsMode.active = toggled);
         }
     }
+
     onVisibilityChanged: {
         if(visibility === Window.Hidden) {
             Preview.showSettings(false);
@@ -29,69 +27,182 @@ Window {
     }
 
     Component.onDestruction: {
+        //Preview.setPosition(previewWindow.x - previewWindow.windowOffsetX, previewWindow.y - (previewWindow.windowOffsetY *2));
         Preview.showSettings(false);
     }
-
-    LCDPreview{
-        id:lcdPreview
-        anchors.fill: parent
-        MouseArea
-        {
-            anchors.fill: parent
-            property int m_x : 0;
-            property int m_y : 0;
-
-            onPressed:
-            {
-                if(!overlayLoader.active) {
-                    overlayLoader.active = true;
-                }
-                hideOverlay.restart();
-                m_x = mouse.x;
-                m_y = mouse.y;
-            }
-
-
-            onPositionChanged:
-            {
-                if(!Preview.movementLocked) {
-                    previewWindow.x = previewWindow.x + mouse.x - m_x
-                    previewWindow.y = previewWindow.y + mouse.y - m_y
-                    previewWindow.raise();
-                    Preview.setPosition(previewWindow.x, previewWindow.y);
-                }
-            }
-        }
-    }
     Loader{
-        id:overlayLoader
-        active:true
+        id:settingsMode
+        active:false
         anchors.fill: parent
-        sourceComponent: PreviewOverlay{
-            id:previewOverlay
-            anchors.fill:parent
-            visible:true
-            onRestartHideTimer: {
-                if(!overlayLoader.active) {
-                    overlayLoader.active = true;
+        sourceComponent: Rectangle{
+            anchors.fill: parent
+            color:"transparent"
+
+            function showOverlay() {
+                previewOnTop.showOverlay();
+            }
+
+            Loader{
+                active: true
+                id:settingsLoader
+                source:Preview.settingsPath
+                onItemChanged: {
+                    if(item) {
+                        previewWindow.width = item.width
+                        previewWindow.height = item.height
+                        if(item.windowXOffset !== undefined) {
+                            previewWindow.windowOffsetX = item.windowXOffset;
+                            previewWindow.x += item.windowXOffset;
+                            previewOnTop.x = -(item.windowXOffset);
+                        }
+
+                        if(item.windowYOffset !== undefined) {
+                            previewWindow.windowOffsetY = item.windowYOffset;
+                            previewWindow.y += item.windowYOffset;
+                            previewOnTop.y = -(item.windowYOffset);
+                        }
+                    }
                 }
-                hideOverlay.restart();
+            }
+            LCDPreview{
+                id:previewOnTop
+                function showOverlay()
+                {
+                    if(!overlayLoader.active) {
+                        overlayLoader.active = true;
+                    }
+                    hideOverlay.restart();
+                }
+                Loader{
+                    id:overlayLoader
+                    active:true
+                    anchors.fill: previewOnTop.preview
+                    sourceComponent: PreviewOverlay{
+                        id:previewOverlay
+                        visible:true
+                        onRestartHideTimer: {
+                            if(!overlayLoader.active) {
+                                overlayLoader.active = true;
+                            }
+                            hideOverlay.restart();
+                        }
+
+                    }
+                }
+                Timer{
+                    id:hideOverlay
+                    interval:5000
+                    repeat:false
+                    onTriggered:{
+                        overlayLoader.active = false;
+                    }
+                    Component.onCompleted: {
+                       hideOverlay.start();
+                    }
+                }
             }
         }
     }
-    Timer{
-        id:hideOverlay
-        interval:5000
-        repeat:false
-        onTriggered:{
-            overlayLoader.active = false;
+
+
+    Loader {
+        id:previewMode
+        active:true
+        anchors.fill:parent
+        onItemChanged:{
+            if(item) {
+                previewWindow.width = 320
+                previewWindow.height = 320
+                previewWindow.x = Preview.x;
+                previewWindow.y = Preview.y;
+                previewWindow.windowOffsetX = 0;
+                previewWindow.windowOffsetY = 0;
+                item.visible = true;
+            }
+        }
+
+        sourceComponent:LCDPreview{
+            id:lcdPreview
+            visible:false
+            anchors.fill: parent
+            function showOverlay() {
+                if(!overlayLoaderT.active) {
+                    overlayLoaderT.active = true;
+                }
+                hideOverlayT.restart();
+            }
+
+            Loader{
+                id:overlayLoaderT
+                active:true
+                anchors.fill: parent
+                sourceComponent: PreviewOverlay{
+                    id:previewOverlayT
+                    anchors.fill:parent
+                    visible:true
+                    onRestartHideTimer: {
+                        if(!overlayLoaderT.active) {
+                            overlayLoaderT.active = true;
+                        }
+                        hideOverlayT.restart();
+                    }
+                }
+            }
+
+            Timer{
+                id:hideOverlayT
+                interval:5000
+                repeat:false
+                onTriggered:{
+                    overlayLoaderT.active = false;
+                }
+            }
+            Component.onCompleted: {
+                hideOverlayT.start();
+            }
+        }
+    }
+
+    MouseArea
+    {
+        anchors.fill: parent
+        property int m_x : 0;
+        property int m_y : 0;
+        propagateComposedEvents:true
+        onPressed:
+        {
+            if(previewMode.item) {
+                previewMode.item.showOverlay();
+            }
+            if(settingsMode.item){
+                settingsMode.item.showOverlay();
+            }
+            m_x = mouse.x;
+            m_y = mouse.y;
+        }
+
+
+        onPositionChanged:
+        {
+            if(!Preview.movementLocked) {
+                previewWindow.x = previewWindow.x + mouse.x - m_x
+                previewWindow.y = previewWindow.y + mouse.y - m_y
+                previewWindow.raise();
+                Preview.setPosition(previewWindow.x - previewWindow.windowOffsetX, previewWindow.y - previewWindow.windowOffsetY);
+            }
+            if(previewMode.item) {
+                previewMode.item.showOverlay();
+            }
+            if(settingsMode.item){
+                settingsMode.item.showOverlay();
+            }
         }
     }
 
     Component.onCompleted: {
         previewWindow.x = Preview.x;
         previewWindow.y = Preview.y;
-        hideOverlay.start();
         KZP.setPreviewWindow(this);
+        settingsMode.active = !(previewMode.active = !Preview.settingsOpen)
     }
 }

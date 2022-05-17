@@ -35,7 +35,7 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 KZPController::KZPController(QApplication *parent)
     : QObject{parent}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr},
-      mPreviewWindow{nullptr}, mPreview{this}
+      mPreviewWindow{nullptr}, mPreview{this}, mModuleManager{this}
 {
     KrakenZDriverSelect::initializeDriverSelect(parent, KrakenZDriverSelect::HARDWARE);
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
@@ -91,6 +91,17 @@ void KZPController::selectSoftwareDriver()
 void KZPController::applicationInitialize()
 {
     setMainWindow();
+    connectModuleManager();
+//    mModuleManager.fetchModuleManifests("FetchRootManifest", {"https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json",
+//                                                         "https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/manifest.json"});
 }
 
 void KZPController::applicationQuiting() // close up shop
@@ -105,6 +116,18 @@ void KZPController::applicationQuiting() // close up shop
     cleanUp();
 }
 
+
+void KZPController::connectModuleManager()
+{
+    connect(&mModuleManager, &ModuleManager::installedModulesCheck, this, &KZPController::receivedInstalledManifests);
+    connect(&mModuleManager, &ModuleManager::moduleManifests, this, &KZPController::receivedModuleManifests);
+    connect(&mModuleManager, &ModuleManager::taskStarted, this, [](QString file, KZPCoroutines::TaskType type) {
+       qDebug() << "Started task type:" << type << "on" <<  file;
+    });
+    connect(&mModuleManager, &ModuleManager::taskFinished, this, [](QString file, KZPCoroutines::TaskType type) {
+        qDebug() << "Finished task type:" << type << "on" <<  file;
+     });
+}
 
 void KZPController::connectToWindow()
 {
@@ -175,9 +198,9 @@ bool KZPController::createDeviceController()
                     mStateBeforeLastError = mState;
                     mState = ApplicationState::ERROR_PERMISSION;
                     QJsonObject error_obj;
-                    error_obj.insert(TYPE_KEY, mState);
-                    error_obj.insert(MSG_KEY, "Software Driver Available");
-                    error_obj.insert(ERROR_KEY, OPEN_DENIED_STR);
+                    error_obj.insert(SharedKeys::TYPE, mState);
+                    error_obj.insert(SharedKeys::MESSAGE, "Software Driver Available");
+                    error_obj.insert(SharedKeys::ERRORSTR, OPEN_DENIED_STR);
                     mError.insert("ControllerStatus", error_obj);
                     success = false;
                     mController = nullptr;
@@ -187,8 +210,8 @@ bool KZPController::createDeviceController()
                 mStateBeforeLastError = mState;
                 mState = ApplicationState::ERROR_DEVICE_NF;
                 QJsonObject error_obj;
-                error_obj.insert(TYPE_KEY, mState);
-                error_obj.insert(MSG_KEY, "Software Driver Available");
+                error_obj.insert(SharedKeys::TYPE, mState);
+                error_obj.insert(SharedKeys::MESSAGE, "Software Driver Available");
                 mError.insert("ControllerStatus", error_obj);
                 mController = nullptr;
             }
@@ -464,6 +487,19 @@ void KZPController::setMainWindow()
     if(mUxEngine && qmlFile.size()) {
         QUrl url(qmlFile);
         mUxEngine->load(url);
+    }
+}
+
+void KZPController::receivedInstalledManifests(QVector<QJsonObject> local_manifests)
+{
+
+}
+
+void KZPController::receivedModuleManifests(QVector<QJsonObject> manifests)
+{
+    qDebug() << "Received " << manifests.size() << " Manifests ";
+    for(const auto & manifest: qAsConst(manifests)) {
+        qDebug() << manifest;
     }
 }
 

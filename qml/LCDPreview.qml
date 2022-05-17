@@ -3,8 +3,10 @@ import com.application.kzp 1.0
 
 Item{
     property int brightness:50
-    anchors.centerIn: parent
     property alias lens: lensItem
+    property alias preview:krakenPreview
+    width:320
+    height:320
     LCDPreviewDelegate{
         id:krakenPreview
         anchors.fill: parent

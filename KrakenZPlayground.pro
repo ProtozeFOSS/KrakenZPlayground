@@ -1,6 +1,6 @@
-QT += widgets quick multimedia
+QT += widgets quick multimedia network
 
-CONFIG += c++17
+CONFIG += c++20
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -15,6 +15,7 @@ SOURCES += \
         krakenz_software.cpp \
         kzp_controller.cpp \
         main.cpp \
+        modules.cpp \
         preview_provider.cpp \
         settings.cpp \
         system_tray.cpp
@@ -41,7 +42,9 @@ HEADERS += \
     krakenz_interface.h \
     krakenz_software.h \
     kzp_controller.h \
+    kzp_coroutines.h \
     kzp_keys.h \
+    modules.h \
     preview_provider.h \
     settings.h \
     system_tray.h

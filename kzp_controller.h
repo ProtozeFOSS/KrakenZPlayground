@@ -5,6 +5,9 @@
 #include <QJsonObject>
 #include "krakenz_driver.h"
 #include <QIcon>
+#include <QVector>
+#include "modules.h"
+using namespace Modules;
 class QApplication;
 class QQuickItem;
 class QQuickWindow;
@@ -28,9 +31,6 @@ constexpr char APP_VERSION[] = "v1.2RC";
 // If the user wants to adjust the profile, the main window will be created and shown.
 // when moving back to background mode, KZP will clean up to maintain a clean footprint.
 
-// Settings Manager logic became redundant and was rolled in
-
-
 class PreviewWindow : public QObject
 {
     Q_OBJECT
@@ -39,6 +39,7 @@ class PreviewWindow : public QObject
     Q_PROPERTY(bool detached READ detached WRITE detachPreview NOTIFY detachChanged MEMBER mDetached)
     Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
     Q_PROPERTY(bool settingsOpen READ settingsOpen WRITE showSettings NOTIFY settingsToggled MEMBER mSettings)
+    Q_PROPERTY(QString settingsPath READ settingsPath NOTIFY settingsPathChanged MEMBER mSettingsPath)
 public:
 
     qreal x() { return mX; }
@@ -46,6 +47,7 @@ public:
     bool  detached() { return mDetached; }
     bool  movementIsLocked() { return mLocked; }
     bool  settingsOpen() { return mSettings; }
+    QString settingsPath() { return mSettingsPath; }
 
     PreviewWindow(QObject* parent = nullptr): QObject{parent}, mX{0}, mY{0}, mDetached{false}, mLocked{false}, mSettings{false} {}
     ~PreviewWindow() = default;
@@ -58,6 +60,7 @@ signals:
     void detachChanged(bool detach); // true is detached, false is docked
     void movementLocked(bool locked);
     void settingsToggled(bool open);
+    void settingsPathChanged(QString path);
 
 public slots:
     void setPosition(qreal x, qreal y) {
@@ -72,7 +75,6 @@ public slots:
     }
     void detachPreview(bool detach)
     {
-        showSettings(false);
         if(detach != mDetached) {
             mDetached = detach;
             emit detachChanged(detach);
@@ -99,6 +101,7 @@ protected:
     bool                          mDetached;
     bool                          mLocked;
     bool                          mSettings;
+    QString                       mSettingsPath;
 };
 
 
@@ -199,6 +202,10 @@ protected:
     QQuickWindow*                 mPreviewWindow;
     PreviewWindow                 mPreview;
 
+    // Module Manager downloads, and installs modules
+    ModuleManager                 mModuleManager;
+    void connectModuleManager();
+
 protected slots:
     // When the UX is changed, this method will control what to do
    // void componentReady();
@@ -212,6 +219,8 @@ protected slots:
     bool initializeMainWindow();
     void showMainWindow();
     void setMainWindow();
+    void receivedInstalledManifests(QVector<QJsonObject>);
+    void receivedModuleManifests(QVector<QJsonObject>);
     void releaseMainWindow();
 
 

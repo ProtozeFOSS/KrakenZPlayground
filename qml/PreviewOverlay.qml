@@ -87,7 +87,7 @@ Item {
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                Preview.settingsOpen = !Preview.settingsOpen;
+                Preview.showSettings(!Preview.settingsOpen);
                 root.restartHideTimer()
             }
         }

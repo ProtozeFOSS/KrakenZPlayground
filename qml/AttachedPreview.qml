@@ -2,6 +2,7 @@ import QtQuick 2.15
 import com.application.kzp 1.0
 
 LCDPreview{
+    anchors.centerIn: parent
     Rectangle{ // Toggle application settings, if they exist
         radius:8
         anchors{
@@ -25,7 +26,7 @@ LCDPreview{
         MouseArea{
             anchors.fill: parent
             onClicked:{
-                Preview.showSettings(!Preview.settingsOpen);
+                Preview.showSettings(true);
             }
         }
     }
