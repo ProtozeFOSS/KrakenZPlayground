@@ -23,10 +23,18 @@ Defines the modules' user visible name. Can be up to 80 characters, anything lon
 ## **folder** `(required)`
 Defines the modules' folder name (in the file structure). Can be up to 64 characters, anything longer will be truncated.
 
+## **url** `(required)`
+Where the package will come from (what is the root path). Example
+```
+https://raw.githubusercontent.com/Tpimp/KZP_Carousel/main/
+```
+
 ## **type** `(required)`
 Needs to be of valid types that KZP can handle. 
-- `qml` is for a qml application repositories
-- `image` is for GIFs or static image content repositories
+- `qml` is for a qml application
+- `gif` is for an animation
+- `image` is for static image content
+- `repo` is for a repository of manifest files (see optional)
 
 ## **version** `(required)`
 A 32bit **integer** version number, max **2,147,483,647**.

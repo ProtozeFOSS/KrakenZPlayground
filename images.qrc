@@ -13,5 +13,7 @@
         <file>images/lock.svg</file>
         <file>images/unlock.svg</file>
         <file>images/settings.svg</file>
+        <file>images/folder.png</file>
+        <file>images/arrow.svg</file>
     </qresource>
 </RCC>
