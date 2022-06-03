@@ -18,10 +18,7 @@ SystemTray::SystemTray(QObject *parent)
     mMenu = new QMenu();
     mProfileMenu = new QMenu("Profile");
     mQuitAction = new QAction("Close", mMenu);
-    connect(mQuitAction, &QAction::triggered, this, [](bool checked){
-            Q_UNUSED(checked)
-            QCoreApplication::exit(0);
-    });
+    connect(mQuitAction, &QAction::triggered, this,  &SystemTray::close);
     mAppBanner = new QAction("Kraken Z3",mMenu);
     mAppBanner->setIcon(QIcon(":/images/Peyton.png"));
     mAppBanner->setToolTip("App Information");

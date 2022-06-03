@@ -20,6 +20,7 @@ public:
     void setEngine(QQmlApplicationEngine* engine);
     void setJsonProfiles(QJsonArray profiles, QString current);
 signals:
+    void close();
     void profileSelected(QString name);
     void showMainWindow();
 

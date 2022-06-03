@@ -24,7 +24,7 @@ Rectangle {
     y:-1
     width:322;
     height:322;
-    rotation:-1*KrakenZDriver.rotationOffset
+    rotation:DeviceConnection ? -1*DeviceConnection.rotationOffset:0
     Rectangle{
         id:appContainer
         color:"black"
@@ -87,7 +87,7 @@ Rectangle {
             style: Text.Sunken
             styleColor: "#01767a"
             color:"white"
-            text: "FPS: " + KrakenZDriver.fps.toString().slice(0,5)
+            text: "FPS: " + DeviceConnection.fps.toString().slice(0,5)
             font.family: "Comic Sans MS"
         }
     }

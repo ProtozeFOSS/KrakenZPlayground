@@ -64,34 +64,34 @@ Item {
         }
     }
 
-    Rectangle{ // Toggle application settings, if they exist
-        radius:2
-        anchors{
-            top:parent.top
-            left:parent.left
-            margins:1
-        }
-        visible:AppController.hasSettings
-        enabled:visible
-        color: "#252429"
-        height:32
-        width:32
-        Image{
-            height:30
-            width:30
-            anchors.centerIn: parent
-            antialiasing: true
-            smooth: true
-            source:"qrc:/images/settings.svg"
-        }
-        MouseArea{
-            anchors.fill: parent
-            onClicked:{
-                Preview.showSettings(!Preview.settingsOpen);
-                root.restartHideTimer()
-            }
-        }
-    }
+//    Rectangle{ // Toggle application settings, if they exist
+//        radius:2
+//        anchors{
+//            top:parent.top
+//            left:parent.left
+//            margins:1
+//        }
+//        visible:Preview.hasSettings
+//        enabled:visible
+//        color: "#252429"
+//        height:32
+//        width:32
+//        Image{
+//            height:30
+//            width:30
+//            anchors.centerIn: parent
+//            antialiasing: true
+//            smooth: true
+//            source:"qrc:/images/settings.svg"
+//        }
+//        MouseArea{
+//            anchors.fill: parent
+//            onClicked:{
+//                Preview.showSettings(!Preview.settingsOpen);
+//                root.restartHideTimer()
+//            }
+//        }
+//    }
 
     Rectangle{ // Play and pause button
         radius:2

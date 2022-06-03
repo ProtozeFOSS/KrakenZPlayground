@@ -20,8 +20,7 @@ Rectangle {
     property alias sourceImage1: sourceImage1
     property alias renderTarget: previewCircle
     color:"transparent"
-    height:320
-    width:320
+    anchors.fill: parent
     Image{
         id: sourceImage0
         smooth: false
@@ -30,8 +29,7 @@ Rectangle {
         cache: true
         fillMode: Image.PreserveAspectCrop
         source:"image://krakenz/buffer"
-        width:320
-        height:320
+        anchors.fill: parent
         onStatusChanged: {
             if(status == Image.Ready){
                 opacityMask.source = sourceImage0;
@@ -47,8 +45,7 @@ Rectangle {
         cache: true
         fillMode: Image.PreserveAspectCrop
         source:""
-        width:320
-        height:320
+        anchors.fill: parent
         onStatusChanged: {
             if(status == Image.Ready){
                 opacityMask.source = sourceImage1;
@@ -59,18 +56,14 @@ Rectangle {
     Rectangle{
         id: previewCircle
         color:"transparent"
-        anchors.centerIn: parent
-        height:320
-        width:320
+        anchors.fill: parent
         radius:width
         visible: true
     }
     OpacityMask{
         id:opacityMask
-        rotation:KrakenZDriver.rotationOffset
+        rotation:DeviceConnection.rotationOffset
         maskSource:previewCircle
-        anchors.centerIn: parent
-        height:320
-        width:320
+        anchors.fill: parent
     }
 }

@@ -7,6 +7,7 @@ Item {
     property int  radius: 0
     property int  brightness: 50
     property alias previewWindow:previewWindow.item
+    signal detached(detached:bool)
     Connections{
         target: Preview
         function onDetachChanged(detach : bool) {
@@ -14,6 +15,7 @@ Item {
                 previewWindow.active = detach;
                 attachedPreview.active = !detach;
             }
+            root.detached(detach);
         }
     }
 

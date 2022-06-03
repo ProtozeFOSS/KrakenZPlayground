@@ -9,24 +9,26 @@
 #include <QQmlEngine>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickItem>
 #include <QQuickWindow>
 #include <QQuickRenderControl>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QTimer>
-#include <QQuickItem>
 #include <QString>
 #include "krakenz_driver.h"
 #include "settings.h"
+#include "system_monitor.h"
+#if QT_VERSION > QT_VERSION_CHECK(6,0,0)
+#include <QQuickRenderTarget>
+#endif
 
-KrakenAppController::KrakenAppController(QObject* preview, KrakenZInterface *controller, QObject *parent)
-    : QObject{parent}, mPreview{preview}, mController{controller}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
+KrakenAppController::KrakenAppController(QObject* preview, KrakenZInterface *controller, SystemMonitor* monitor,  QObject *parent)
+    : QObject{parent}, mPreview{preview}, mController{controller}, mMonitor{monitor}, mContainer{nullptr}, mCurrentApp{nullptr}, mCurrentComponent{nullptr}, mContainerComponent{nullptr},
     mOffscreenSurface(nullptr), mGLContext(nullptr), mRenderControl(nullptr), mOffscreenWindow(nullptr), mFBO(nullptr),
-    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160),mInitialized(false), mActive(false),
+    mAppEngine(nullptr), mOrientation(Qt::LandscapeOrientation), mFrameDelay(160), mDrawCount{0}, mInitialized(false), mActive(false),
     mSize(64,64), mDepthSize(32), mStencilSize(8), mAlphaSize(8), mBlueSize(8), mRedSize(8), mGreenSize(8),
     mPrimaryScreen{nullptr}, mDelayTimer(new QTimer(parent)), mDPR(1.0), mMode(AppMode::STATIC_IMAGE),
-    mDrawFPS(false), mShowFPS{false}, mPlaying(false), mSettings{false}
+    mDrawFPS(false), mShowFPS{false}, mPlaying(false)
 {
     connect(mDelayTimer, &QTimer::timeout, this, &KrakenAppController::renderNext);
 }
@@ -54,17 +56,12 @@ void KrakenAppController::createApplication()
     } else {
         mCurrentApp->setParentItem(mContainer);
     }
-    auto hasSettings{mCurrentApp->property("settings").isValid()};
-    if(hasSettings != mSettings) {
-        mSettings = hasSettings;
-        emit hasSettingsChanged(mSettings);
-    }
     mCurrentApp->setWidth(mSize.width());
     mCurrentApp->setHeight(mSize.height());
     mActive = true;
     setMode(AppMode::QML_APP);
     emit appReady();
-    renderNext();
+    QTimer::singleShot(1, this, &KrakenAppController::renderNext);
 }
 
 void KrakenAppController::createContainer()
@@ -116,7 +113,8 @@ void KrakenAppController::containerComponentReady()
         }
         mAppEngine->rootContext()->setContextProperty("PreviewWindow", mPreview);
         mAppEngine->rootContext()->setContextProperty("AppController", this);
-        mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
+        mAppEngine->rootContext()->setContextProperty("DeviceConnection", mController);
+        mAppEngine->rootContext()->setContextProperty("SystemMonitor", mMonitor);
         mContainer = qobject_cast<QQuickItem*>(mContainerComponent->create());
         auto errors = mContainerComponent->errors();
         if(errors.size()){
@@ -251,11 +249,19 @@ void KrakenAppController::reconfigureSurfaceFormat()
     }
 
     mGLContext->makeCurrent(mOffscreenSurface);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     mRenderControl->initialize(mGLContext);
+#else
+    mRenderControl->initialize();
+#endif
 
     if(!mFBO) {
         mFBO = new QOpenGLFramebufferObject(mSize * mDPR, QOpenGLFramebufferObject::CombinedDepthStencil);
-        mOffscreenWindow->setRenderTarget(mFBO);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    mOffscreenWindow->setRenderTarget(mFBO);
+#else
+    mOffscreenWindow->setRenderTarget(QQuickRenderTarget::fromOpenGLTexture(mFBO->texture(), mFBO->size()));
+#endif
     }
 }
 
@@ -299,7 +305,6 @@ void KrakenAppController::renderNext()
 
 void KrakenAppController::resetAppEngine()
 {
-    mSettings = false;
     if(mAppEngine) {
         mAppEngine->clearComponentCache();
         mAppEngine->collectGarbage();
@@ -315,27 +320,13 @@ void KrakenAppController::resetAppEngine()
     }
     mAppEngine->rootContext()->setContextProperty("PreviewWindow", mPreview);
     mAppEngine->rootContext()->setContextProperty("AppController", this);
-    mAppEngine->rootContext()->setContextProperty("KrakenZDriver", mController);
+    mAppEngine->rootContext()->setContextProperty("DeviceConnection", mController);
+    mAppEngine->rootContext()->setContextProperty("SystemMonitor", mMonitor);
 
     if(!mAppEngine->incubationController()) {
         mAppEngine->setIncubationController(mOffscreenWindow->incubationController());
     }
     createContainer();
-}
-
-void KrakenAppController::scheduleRedraw()
-{
-    if(mMode == AppMode::QML_APP) {
-        renderNext();
-    }
-}
-
-void KrakenAppController::setTimerDrawn(bool draw)
-{
-    mActive = draw;
-    if(mActive){
-        renderNext();
-    }
 }
 
 void KrakenAppController::setAnimationPlaying(bool playing)
@@ -362,6 +353,15 @@ void KrakenAppController::setMode(AppMode mode)
     }
     emit modeChanged(mode);
 
+}
+void KrakenAppController::setController(KrakenZInterface *controller)
+{
+    if(controller != mController) {
+        mController = controller;
+        if(mAppEngine) {
+            mAppEngine->rootContext()->setContextProperty("DeviceConnection", mController);
+        }
+    }
 }
 
 void KrakenAppController::setPrimaryScreen(QScreen *screen)
@@ -443,6 +443,10 @@ bool KrakenAppController::event(QEvent *event)
             emit draw();
             mDelayTimer->start();
         }
+        if(++mDrawCount > 210) {
+            mDrawCount = 0;
+            mAppEngine->collectGarbage();
+        }
         event->accept();
         return true;
     }
@@ -482,6 +486,14 @@ void KrakenAppController::setDepthSize(int depth_size)
     }
 }
 
+void KrakenAppController::setSystemMonitor(SystemMonitor *monitor)
+{
+    mMonitor = monitor;
+    if(mAppEngine) {
+        mAppEngine->rootContext()->setContextProperty("SystemMonitor", mMonitor);
+    }
+}
+
 void KrakenAppController::setStencilSize(int stencil_size)
 {
     if(stencil_size != mStencilSize) {
@@ -502,6 +514,8 @@ void KrakenAppController::setFrameDelay(int frame_delay)
 void KrakenAppController::setJsonProfile(QJsonObject profile)
 {
     auto loadedPath = profile.value("loadedPath").toString();
+    // if loaded path is a manifest file, load manifest
+    // else load as mode
     int mode = profile.value("mode").toInt(-2);
     switch(mode){
         case AppMode::BUILT_IN:{
@@ -586,7 +600,7 @@ bool KrakenAppController::loadQmlFile(QString path)
     bool loaded(false);
     releaseApplication();
     mLoadedPath = path;
-    mCurrentComponent = new QQmlComponent(mAppEngine, QUrl(path));
+    mCurrentComponent = new QQmlComponent(mAppEngine, QUrl(path),QQmlComponent::Asynchronous, this);
     if(mCurrentComponent->isReady()){
         mCurrentApp = qobject_cast<QQuickItem*>(mCurrentComponent->create());
         if(!mCurrentApp || mCurrentComponent->isError()){
@@ -620,5 +634,8 @@ KrakenAppController::~KrakenAppController()
     delete mGLContext;
     delete mOffscreenSurface;
     delete mAppEngine;
+    mMonitor = nullptr;
+    mController = nullptr;
+    mPreview = nullptr;
 }
 

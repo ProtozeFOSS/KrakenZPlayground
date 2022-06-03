@@ -5,18 +5,28 @@ import com.application.kzp 1.0
 
 Window {
     id:previewWindow
-    width: 320
-    height:320
     visible: true
     color:"transparent"
-    transientParent: null
     flags: Qt.FramelessWindowHint |  Qt.WA_TranslucentBackground | Qt.WindowStaysOnBottomHint
     property int windowOffsetX:0
     property int windowOffsetY:0
+    width: Preview.width;
+    height: Preview.height;
+
+
+    Component.onCompleted: {
+        previewWindow.x = Preview.x;
+        previewWindow.y = Preview.y;
+        previewWindow.width = Preview.width;
+        previewWindow.height = Preview.height;
+        KZP.setPreviewWindow(this);
+        //settingsMode.active = !(previewMode.active = !Preview.settingsOpen)
+    }
     Connections{
         target:Preview
-        function onSettingsToggled(toggled) {
-            previewMode.active = !(settingsMode.active = toggled);
+        function onSettingsToggled(open) {
+            settingsMode.active = Preview.settingsOpen
+            previewMode.active = !Preview.settingsOpen;
         }
     }
 
@@ -43,9 +53,10 @@ Window {
             }
 
             Loader{
-                active: true
+                active: false
                 id:settingsLoader
                 source:Preview.settingsPath
+                anchors.fill: parent
                 onItemChanged: {
                     if(item) {
                         previewWindow.width = item.width
@@ -53,7 +64,6 @@ Window {
                         if(item.windowXOffset !== undefined) {
                             previewWindow.windowOffsetX = item.windowXOffset;
                             previewWindow.x += item.windowXOffset;
-                            previewOnTop.x = -(item.windowXOffset);
                         }
 
                         if(item.windowYOffset !== undefined) {
@@ -61,45 +71,22 @@ Window {
                             previewWindow.y += item.windowYOffset;
                             previewOnTop.y = -(item.windowYOffset);
                         }
+                        if(item.previewContainer) {
+                            previewOnTop.parent = item.previewContainer;
+                        }else {
+                            previewOnTop.x = -(previewWindow.windowOffsetX);
+                            previewOnTop.y = -(previewWindow.windowOffsetY)
+                        }
                     }
                 }
             }
             LCDPreview{
                 id:previewOnTop
-                function showOverlay()
-                {
-                    if(!overlayLoader.active) {
-                        overlayLoader.active = true;
-                    }
-                    hideOverlay.restart();
-                }
-                Loader{
-                    id:overlayLoader
-                    active:true
-                    anchors.fill: previewOnTop.preview
-                    sourceComponent: PreviewOverlay{
-                        id:previewOverlay
-                        visible:true
-                        onRestartHideTimer: {
-                            if(!overlayLoader.active) {
-                                overlayLoader.active = true;
-                            }
-                            hideOverlay.restart();
-                        }
-
-                    }
-                }
-                Timer{
-                    id:hideOverlay
-                    interval:5000
-                    repeat:false
-                    onTriggered:{
-                        overlayLoader.active = false;
-                    }
-                    Component.onCompleted: {
-                       hideOverlay.start();
-                    }
-                }
+                anchors.fill: parent
+            }
+            Component.onCompleted: {
+                console.log("Settings Created");
+                settingsLoader.active = true
             }
         }
     }
@@ -111,8 +98,8 @@ Window {
         anchors.fill:parent
         onItemChanged:{
             if(item) {
-                previewWindow.width = 320
-                previewWindow.height = 320
+                previewWindow.width = Preview.width
+                previewWindow.height = Preview.height
                 previewWindow.x = Preview.x;
                 previewWindow.y = Preview.y;
                 previewWindow.windowOffsetX = 0;
@@ -125,84 +112,67 @@ Window {
             id:lcdPreview
             visible:false
             anchors.fill: parent
+            x:0
+            y:0
             function showOverlay() {
-                if(!overlayLoaderT.active) {
-                    overlayLoaderT.active = true;
+                if(!overlayLoader.active) {
+                    overlayLoader.active = true;
                 }
-                hideOverlayT.restart();
+                hideOverlay.restart();
             }
-
+            MouseArea
+            {
+                anchors.fill: parent
+                anchors.margins: 36
+                property int m_x : 0;
+                property int m_y : 0;
+                onPressed:
+                {
+                    if(previewMode.item) {
+                        previewMode.item.showOverlay();
+                    }
+                    m_x = mouse.x;
+                    m_y = mouse.y;
+                }
+                onPositionChanged:
+                {
+                    if(!Preview.movementLocked) {
+                        previewWindow.x = previewWindow.x + mouse.x - m_x
+                        previewWindow.y = previewWindow.y + mouse.y - m_y
+                        previewWindow.raise();
+                        Preview.setPosition(previewWindow.x, previewWindow.y);
+                    }
+                    lcdPreview.showOverlay();
+                }
+            }
             Loader{
-                id:overlayLoaderT
+                id:overlayLoader
                 active:true
                 anchors.fill: parent
                 sourceComponent: PreviewOverlay{
-                    id:previewOverlayT
+                    id:previewOverlay
                     anchors.fill:parent
                     visible:true
                     onRestartHideTimer: {
-                        if(!overlayLoaderT.active) {
-                            overlayLoaderT.active = true;
+                        if(!overlayLoader.active) {
+                            overlayLoader.active = true;
                         }
-                        hideOverlayT.restart();
+                        hideOverlay.restart();
                     }
                 }
             }
 
             Timer{
-                id:hideOverlayT
+                id:hideOverlay
                 interval:5000
                 repeat:false
                 onTriggered:{
-                    overlayLoaderT.active = false;
+                    overlayLoader.active = false;
                 }
             }
             Component.onCompleted: {
-                hideOverlayT.start();
-            }
-        }
-    }
-
-    MouseArea
-    {
-        anchors.fill: parent
-        property int m_x : 0;
-        property int m_y : 0;
-        propagateComposedEvents:true
-        onPressed:
-        {
-            if(previewMode.item) {
-                previewMode.item.showOverlay();
-            }
-            if(settingsMode.item){
-                settingsMode.item.showOverlay();
-            }
-            m_x = mouse.x;
-            m_y = mouse.y;
-        }
-
-
-        onPositionChanged:
-        {
-            if(!Preview.movementLocked) {
-                previewWindow.x = previewWindow.x + mouse.x - m_x
-                previewWindow.y = previewWindow.y + mouse.y - m_y
-                previewWindow.raise();
-                Preview.setPosition(previewWindow.x - previewWindow.windowOffsetX, previewWindow.y - previewWindow.windowOffsetY);
-            }
-            if(previewMode.item) {
-                previewMode.item.showOverlay();
-            }
-            if(settingsMode.item){
-                settingsMode.item.showOverlay();
-            }
-        }
-    }
-
-    Component.onCompleted: {
-        previewWindow.x = Preview.x;
-        previewWindow.y = Preview.y;
-        KZP.setPreviewWindow(this);
-        settingsMode.active = !(previewMode.active = !Preview.settingsOpen)
+                hideOverlay.start();
+            }            
+        }        
     }
 }

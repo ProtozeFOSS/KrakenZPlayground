@@ -7,6 +7,9 @@
 #include <QIcon>
 #include <QVector>
 #include "modules.h"
+#include "system_monitor.h"
+#include <QTimer>
+
 using namespace Modules;
 class QApplication;
 class QQuickItem;
@@ -20,6 +23,16 @@ enum class ApplicationState;
 
 constexpr char APP_VERSION[] = "v1.2RC";
 
+
+struct AppSettings{
+    bool autoUpdate{false};
+    bool autoUpdateModules{false};
+    // main window
+    int  windowX{0};
+    int  windowY{0};
+};
+
+
 // KZPController takes the UX logic from main.qml and the backend logic from main.cpp and puts them into a class.
 // The goal, this object is on the stack in main and controlls the logic on the main thread
 // This should improve the maintainability and readability of the main control logic.
@@ -31,79 +44,8 @@ constexpr char APP_VERSION[] = "v1.2RC";
 // If the user wants to adjust the profile, the main window will be created and shown.
 // when moving back to background mode, KZP will clean up to maintain a clean footprint.
 
-class PreviewWindow : public QObject
-{
-    Q_OBJECT
-    Q_PROPERTY(qreal x READ x NOTIFY xChanged MEMBER mX)
-    Q_PROPERTY(qreal y READ y NOTIFY yChanged MEMBER mY)
-    Q_PROPERTY(bool detached READ detached WRITE detachPreview NOTIFY detachChanged MEMBER mDetached)
-    Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
-    Q_PROPERTY(bool settingsOpen READ settingsOpen WRITE showSettings NOTIFY settingsToggled MEMBER mSettings)
-    Q_PROPERTY(QString settingsPath READ settingsPath NOTIFY settingsPathChanged MEMBER mSettingsPath)
-public:
 
-    qreal x() { return mX; }
-    qreal y() { return mY; }
-    bool  detached() { return mDetached; }
-    bool  movementIsLocked() { return mLocked; }
-    bool  settingsOpen() { return mSettings; }
-    QString settingsPath() { return mSettingsPath; }
-
-    PreviewWindow(QObject* parent = nullptr): QObject{parent}, mX{0}, mY{0}, mDetached{false}, mLocked{false}, mSettings{false} {}
-    ~PreviewWindow() = default;
-
-    friend class KZPController;
-
-signals:
-    void xChanged(qreal x);
-    void yChanged(qreal y);
-    void detachChanged(bool detach); // true is detached, false is docked
-    void movementLocked(bool locked);
-    void settingsToggled(bool open);
-    void settingsPathChanged(QString path);
-
-public slots:
-    void setPosition(qreal x, qreal y) {
-        if(x != mX) {
-            mX = x;
-            emit xChanged(x);
-        }
-        if(y != mY) {
-            mY = y;
-            emit yChanged(y);
-        }
-    }
-    void detachPreview(bool detach)
-    {
-        if(detach != mDetached) {
-            mDetached = detach;
-            emit detachChanged(detach);
-        }
-    }
-    void lockMovement(bool lock)
-    {
-        if(lock != mLocked) {
-            mLocked = lock;
-            emit movementLocked(lock);
-        }
-    }
-    void showSettings(bool show)
-    {
-        if(show != mSettings) {
-            mSettings = show;
-            emit settingsToggled(show);
-        }
-    }
-
-protected:
-    qreal                         mX;
-    qreal                         mY;
-    bool                          mDetached;
-    bool                          mLocked;
-    bool                          mSettings;
-    QString                       mSettingsPath;
-};
-
+#include "preview_window.h"
 
 class KZPController : public QObject
 {
@@ -138,6 +80,9 @@ public:
     const QString applicationVersion() { return APP_VERSION; }
     void setSettingsConfiguration(QString directory, QString profile_name, bool userDirectory);
     Q_INVOKABLE void setPreviewWindow(QObject* window);
+    Q_INVOKABLE void loadManifest(QString manifest_file);
+    Q_INVOKABLE void loadManifest(QJsonObject manifest_obj);
+
 
 signals:
     void containerChanged(QQuickItem* container);
@@ -168,13 +113,13 @@ public slots:
 protected:
     // Settings Members
     QString                       mSettingsDir;
+    QString                       mRootDir;
     QString                       mActiveProfile;
     QJsonObject                   mError;
     QJsonObject                   mProfile;
+    AppSettings                   mSettings;
     bool                          mAppliedSettings;
-
     void         loadProfile();
-    QJsonObject  previewSettings();
     void         writeSettingsFile();
 
 
@@ -206,6 +151,7 @@ protected:
     ModuleManager                 mModuleManager;
     void connectModuleManager();
 
+    SystemMonitor*                mHWMonitor;
 protected slots:
     // When the UX is changed, this method will control what to do
    // void componentReady();
@@ -215,13 +161,16 @@ protected slots:
     void processBackgroundFrame(QImage frame);
     void moveToBackground();
     void setProfile(QString name);
-    void initializeBackend();
+    bool initializeBackend();
     bool initializeMainWindow();
     void showMainWindow();
     void setMainWindow();
     void receivedInstalledManifests(QVector<QJsonObject>);
     void receivedModuleManifests(QVector<QJsonObject>);
     void releaseMainWindow();
+
+    // module slots
+
 
 
 };

@@ -15,5 +15,6 @@
         <file>images/settings.svg</file>
         <file>images/folder.png</file>
         <file>images/arrow.svg</file>
+        <file>images/trash_catch.gif</file>
     </qresource>
 </RCC>

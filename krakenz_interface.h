@@ -111,7 +111,7 @@ public:
     virtual bool initialize(bool&){ return false;}
     virtual bool initialized() { return false; }
     virtual bool isSoftware() { return true; }
-    virtual QJsonObject toJsonProfile(){ return QJsonObject(); }
+    virtual QJsonObject toJsonProfile();
 
 signals:
     void foundChanged(bool);
@@ -137,7 +137,7 @@ public slots:
     virtual void setFanDuty(quint8){}
     virtual void setPumpDuty(quint8){} // flat
     virtual void setImage(QImage, quint8 = 0, bool = true){}
-    virtual void setJsonProfile(QJsonObject){}
+    virtual void setJsonProfile(QJsonObject);
     virtual void setRotationOffset(int){}
     virtual void setNZXTMonitor(){}
     virtual void setBuiltIn(quint8){}

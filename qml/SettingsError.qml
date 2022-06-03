@@ -50,7 +50,7 @@ Window {
             font.pixelSize: 24
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            text:SettingsStatus.errorMessage
+            text:SettingsStatus.errorString
         }
         Text{
             id:filePath

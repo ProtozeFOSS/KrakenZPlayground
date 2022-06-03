@@ -5,8 +5,6 @@ Item{
     property int brightness:50
     property alias lens: lensItem
     property alias preview:krakenPreview
-    width:320
-    height:320
     LCDPreviewDelegate{
         id:krakenPreview
         anchors.fill: parent
@@ -28,11 +26,9 @@ Item{
     Rectangle{
         id:builtinMode
         visible: AppController.mode == OffscreenApp.BUILT_IN || errorTitle.visible
-        anchors.centerIn: krakenPreview
-        width:320
-        height:320
+        anchors.fill: krakenPreview
         color: "#22262b"
-        radius:160
+        radius:width/2
         border.width: 2
         border.color: "#5c5c5c"
         Text{
@@ -48,9 +44,7 @@ Item{
     }
     Item{
         id:imageOut
-        anchors.centerIn: krakenPreview
-        width:320
-        height:320
+        anchors.fill: krakenPreview
 
         Rectangle{
             id: lensItem
@@ -113,7 +107,7 @@ Item{
                 style: Text.Sunken
                 styleColor: "#01767a"
                 color:"white"
-                text: "FPS: " + KrakenZDriver.fps.toString().slice(0,5)
+                text: "FPS: " + DeviceConnection.fps.toString().slice(0,5)
                 font.family: "Comic Sans MS"
             }
         }

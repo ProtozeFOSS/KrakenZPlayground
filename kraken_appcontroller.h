@@ -10,9 +10,10 @@
 #include <QScreen>
 #include <QJsonObject>
 #include <QAnimationDriver>
+#include <QQuickItem>
 
+class SystemMonitor;
 class KrakenZInterface;
-class QQuickItem;
 class QTimer;
 class QOpenGLContext;
 class QOpenGLFramebufferObject;
@@ -35,7 +36,8 @@ protected:
     qint64 mElapsed;
 };
 
-class KrakenAppController : public QObject
+class
+        KrakenAppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickItem* container  NOTIFY containerChanged MEMBER mContainer)
@@ -50,10 +52,9 @@ class KrakenAppController : public QObject
     Q_PROPERTY(bool showFPS READ showFPS WRITE setShowFPS NOTIFY showFPSChanged MEMBER mShowFPS)
     Q_PROPERTY(QString loadedPath READ loadedPath NOTIFY loadedPathChanged MEMBER mLoadedPath)
     Q_PROPERTY(bool animationPlaying READ animationPlaying WRITE setAnimationPlaying NOTIFY animationPlayingChanged MEMBER mPlaying)
-    Q_PROPERTY(bool hasSettings READ hasSettings NOTIFY hasSettingsChanged MEMBER mSettings)
 
 public:
-    KrakenAppController(QObject* preview, KrakenZInterface* controller, QObject* parent = nullptr);
+    KrakenAppController(QObject* preview, KrakenZInterface* controller, SystemMonitor* monitor, QObject* parent = nullptr);
     ~KrakenAppController();
     enum AppMode{ BUILT_IN = -1, STATIC_IMAGE = 0, GIF_MODE = 1, QML_APP = 2};
     Q_ENUM(AppMode)
@@ -68,6 +69,7 @@ public:
 
     bool  event(QEvent *event) override;
     bool  animationPlaying() { return mPlaying; }
+    Q_INVOKABLE bool timerDrawn() { return mActive; }
     QSize screenSize() { return mSize; }
     void  closeQmlApplications();
     int   depthSize() { return mDepthSize; }
@@ -77,7 +79,6 @@ public:
     int   redSize()  { return mRedSize; }
     int   greenSize() { return mGreenSize; }
     int   frameDelay() { return mFrameDelay; }
-    bool   hasSettings() { return mSettings; }
     void  setPrimaryScreen(QScreen* screen);
     Qt::ScreenOrientation orientation() { return mOrientation; }
     bool drawFPS() { return mDrawFPS; }
@@ -88,11 +89,9 @@ public:
     void setRedSize(int red_size);
     void setBlueSize(int blue_size);
     void setGreenSize(int green_size);
-    void setController(KrakenZInterface* controller){ mController = controller; }
+    void setController(KrakenZInterface* controller);
     QString loadedPath() { return mLoadedPath; }
-    Q_INVOKABLE void scheduleRedraw();
-    Q_INVOKABLE void setTimerDrawn(bool draw);
-
+    void setSystemMonitor(SystemMonitor* monitor);
 
 
     // Application Settings API
@@ -116,7 +115,6 @@ signals:
     void drawFPSChanged(bool draw_fps);
     void showFPSChanged(bool show_fps);
     void loadedPathChanged(QString path);
-    void hasSettingsChanged(bool has_settings);
 
 public slots:
     void initialize();
@@ -138,6 +136,7 @@ protected slots:
 protected:
     QObject*          mPreview;
     KrakenZInterface* mController;
+    SystemMonitor*    mMonitor;
     QQuickItem*       mContainer;
     QQuickItem*       mCurrentApp;
     QQmlComponent*    mCurrentComponent;
@@ -154,6 +153,7 @@ protected:
 
     // controlling the state
     int mFrameDelay;
+    uint8_t mDrawCount;
     bool mInitialized;
     bool mActive;
     AnimationDriver*           mAnimationDriver;
@@ -173,7 +173,6 @@ protected:
     bool     mDrawFPS;
     bool     mShowFPS;
     bool     mPlaying;
-    bool     mSettings;
     QString  mLoadedPath;
 
     void adjustAnimationDriver();

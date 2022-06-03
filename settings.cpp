@@ -37,8 +37,11 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
     if(!settingsDir.exists(directory)) {
         if(userDirectory) {
             state = AppState::ERROR_SETTINGS_NF;
-            settings.insert(SharedKeys::TYPE, state);
-            settings.insert(SharedKeys::MESSAGE, "No settings found @: " + directory + QDir::separator() + SETTINGS_FNAME);
+            settings.insert(SharedKeys::Type, state);
+            settings.insert(SharedKeys::Message, "Could not find setings file");
+            settings.insert(SharedKeys::FilePath,"File: " + directory + "/settings.json\n");
+            QString errorString("Custom path on commandline is likely incorrect.\nCheck the path, you might need quotes.");
+            settings.insert(SharedKeys::ErrorString, errorString);
             return settings;
         } else {
             if(!settingsDir.mkpath(directory)) {
@@ -48,9 +51,9 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
                 directoryExists = true;
             }
         }
-    }else {
-        directoryExists = true;
     }
+
+
     filePath = directory +  QDir::separator() + SETTINGS_FNAME;
     // attempt open and load
     QFile settingsFile(filePath);
@@ -59,9 +62,9 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
     if(settingsFile.open(QFile::ReadOnly)) {
         jsonData = settingsFile.readAll();
         auto settingsDoc = QJsonDocument::fromJson(jsonData, &parseError);
-        if(settingsDoc.isObject() && !settingsDoc.isNull() && parseError.error == QJsonParseError::NoError) {
+        if(settingsDoc.isObject() && !settingsDoc.isNull() && parseError.error == QJsonParseError::NoError) { // Valid JSON
             settings = settingsDoc.object();
-            if(settings.size() != 0) {
+            if(settings.size() != 0) { // Object should have data
                 QJsonObject profile;
                 profileName = profileName.size() ? profileName:settings.value("startProfile").toString();                
                 auto profiles = settings.value("profiles").toArray();
@@ -90,12 +93,12 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
                         state = AppState::ERROR_PROFILE_NF;
                     } else { // profiles are borked
                         state = AppState::ERROR_PROFILES;                        
-                        settings.insert(SharedKeys::TYPE, state);
-                        settings.insert(SharedKeys::MESSAGE, "Settings file\ndoes not contain a profiles array");
-                        settings.insert(SharedKeys::PATH,"File: " + filePath + "\n");
+                        settings.insert(SharedKeys::Type, state);
+                        settings.insert(SharedKeys::Message, "Settings file\ndoes not contain a profiles array");
+                        settings.insert(SharedKeys::FilePath,"File: " + filePath + "\n");
                         QString errorString("Missing or corrupt 'profiles':[{profile}] member\n");
                         errorString.append("Fix or delete the corrupt file");
-                        settings.insert(SharedKeys::ERRORSTR, errorString);
+                        settings.insert(SharedKeys::ErrorString, errorString);
                     }
                 }
             }else {
@@ -107,6 +110,11 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
     }else{
         if(userDirectory) {
             state = AppState::ERROR_SETTINGS_NF;
+            settings.insert(SharedKeys::Type, state);
+            settings.insert(SharedKeys::Message, "Could not find setings file");
+            settings.insert(SharedKeys::FilePath,"File: " + filePath + "\n");
+            QString errorString("Custom path on commandline is likely incorrect");
+            settings.insert(SharedKeys::ErrorString, errorString);
         } else {
             // create default
             if(directoryExists) {
@@ -116,9 +124,9 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
     }
 
     if(state == AppState::ERROR_PARSE_SETTINGS) { // error occurred, return an error message instead
-        settings.insert(SharedKeys::TYPE, state);
-        settings.insert(SharedKeys::MESSAGE, "Failed to parse settings.json");
-        settings.insert(SharedKeys::PATH,"File: " + filePath + "\n");
+        settings.insert(SharedKeys::Type, state);
+        settings.insert(SharedKeys::Message, "Failed to parse settings.json");
+        settings.insert(SharedKeys::FilePath,"File: " + filePath + "\n");
         QString errorString("Parse Error\n");
         auto errorCharacter{jsonData.at(parseError.offset-1)};
         auto lineNumber = countLineNumbers(jsonData, parseError.offset);
@@ -127,7 +135,7 @@ QJsonObject Settings::loadSettings(QString directory, QString& profileName, int 
         errorString.append("  character offset: ");
         errorString.append(QString::number(parseError.offset));
         errorString.append(" " + parseError.errorString() + "  '" + errorCharacter + "' ");
-        settings.insert(SharedKeys::ERRORSTR, errorString);
+        settings.insert(SharedKeys::ErrorString, errorString);
     }
 
     return settings;

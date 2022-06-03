@@ -39,7 +39,6 @@ public:
     Q_INVOKABLE bool found() override { return mFound; }
     Q_INVOKABLE bool initialized() override { return mInitialized; }
     Q_INVOKABLE void closeConnections();
-    QJsonObject toJsonProfile() override;
     ~KrakenZDriver();
 
 

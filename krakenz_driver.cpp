@@ -8,6 +8,9 @@
 #include <QImageReader>
 #include <QQuickItemGrabResult>
 #include <QGuiApplication>
+
+#include "kzp_keys.h"
+
 const int _WRITE_LENGTH = 64;
 const int _WRITE_BULK_LENGTH = 512;
 const quint16 _MAX_MEMORY_SLOTS = 53255;
@@ -162,8 +165,11 @@ void KrakenZDriver::setImage(QImage image, quint8 index, bool applyAfterSet)
     ++mFrames;
     mWritingImage = false;
     if(applyAfterSet) {
-        sendSwitchBucket(index);
-        mLCDCTL->waitForBytesWritten(100);
+        QTimer::singleShot(1, this, [this, index](){
+            sendSwitchBucket(index);
+            mLCDCTL->waitForBytesWritten(10);
+
+        });
     }
 }
 
@@ -193,12 +199,12 @@ void KrakenZDriver::parseFWVersion(QByteArray &data)
 {
     if(data.size() >= 20)
     {
-        QString fw("0.0.0");
+        QString fw(QStringLiteral("0.0.0"));
         fw[0] = QString::number(data.at(17)).at(0);
         fw[2]=QString::number(data.at(18)).at(0);
         fw[4]= QString::number(data.at(19)).at(0);
         mVersion = fw;
-        qDebug() << "KRAKEN FW Version: v" << mVersion;
+        qDebug() << QStringLiteral("KRAKEN FW Version: v") << mVersion;
         emit fwInfoChanged(mVersion);
     }
 }
@@ -284,24 +290,24 @@ void KrakenZDriver::setFanDuty(quint8 duty)
 
 void KrakenZDriver::setJsonProfile(QJsonObject profile)
 {
-    int fanDuty = profile.value("fanDuty").toInt(-1);
+    int fanDuty = profile.value(SharedKeys::FanDuty).toInt(-1);
     if(fanDuty >= 0 ) {
         setFanDuty(fanDuty);
         mFanDuty = fanDuty;
         emit fanDutyChanged(mFanDuty);
     }
-    int pumpDuty = profile.value("pumpDuty").toInt(-1);
+    int pumpDuty = profile.value(SharedKeys::PumpDuty).toInt(-1);
     if(pumpDuty) {
         setPumpDuty(pumpDuty);
         mPumpDuty = pumpDuty;
         emit pumpDutyChanged(mFanDuty);
     }
     //set the values
-    int rotationOffset = profile.value("rotationOffset").toInt(-1);
+    int rotationOffset = profile.value(SharedKeys::Rotation).toInt(-1);
     if(rotationOffset >= 0 ) {
         setRotationOffset(rotationOffset);
     }
-    int brightness = profile.value("brightness").toInt(-1);
+    int brightness = profile.value(SharedKeys::Brightness).toInt(-1);
     if(brightness >= 0 ) {
         setBrightness(brightness);
     }
@@ -567,16 +573,6 @@ void KrakenZDriver::setRotationOffset(int offset)
         mRotationOffset = offset;
         emit rotationOffsetChanged(offset);
     }
-}
-
-QJsonObject KrakenZDriver::toJsonProfile()
-{
-    QJsonObject out;
-    out.insert("pumpDuty", mPumpDuty);
-    out.insert("fanDuty", mFanDuty);
-    out.insert("rotationOffset", mRotationOffset);
-    out.insert("brightness", mBrightness);
-    return out;
 }
 
 void KrakenZDriver::receivedControlResponse()

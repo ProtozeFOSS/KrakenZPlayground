@@ -313,7 +313,7 @@ Window {
                 anchors.fill: parent
                 onClicked: {
                     AppController.setOrientationFromAngle(krakenWhiteRing.rotation)
-                    KrakenZDriver.setBrightness(configureTop.brightness)
+                    DeviceConnection.setBrightness(configureTop.brightness)
                     KZP.configured()
                 }
             }

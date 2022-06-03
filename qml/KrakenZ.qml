@@ -33,7 +33,7 @@ Window {
                 topMargin: 4
             }
             leftPadding: 16
-            text: KrakenZDriver.isSoftware ? "Kraken Z3 ( Software )" : "Kraken Z3"
+            text: DeviceConnection.isSoftware ? "Kraken Z3 ( Software )" : "Kraken Z3"
         }
 
         Rectangle{
@@ -83,7 +83,7 @@ Window {
                 topMargin:1
                 leftMargin:4
             }
-            text:KrakenZDriver.liquidTemperature.toString().slice(0,5) + " °C";
+            text:DeviceConnection.liquidTemperature.toString().slice(0,5) + " °C";
             font.family: "Cambria"
         }
 
@@ -120,7 +120,7 @@ Window {
                 topMargin:1
                 leftMargin:4
             }
-            text:KrakenZDriver.pumpSpeed + " RPM";
+            text:DeviceConnection.pumpSpeed + " RPM";
             font.family: "Cambria"
         }
 
@@ -156,7 +156,7 @@ Window {
                 topMargin:1
                 leftMargin:4
             }
-            text:KrakenZDriver.fanSpeed + " RPM";
+            text:DeviceConnection.fanSpeed + " RPM";
             font.family: "Cambria"
         }
 
@@ -191,7 +191,7 @@ Window {
                 topMargin:1
                 leftMargin:4
             }
-            text:KrakenZDriver.pumpDuty + " %";
+            text:DeviceConnection.pumpDuty + " %";
             font.family: "Cambria"
         }
 
@@ -227,7 +227,7 @@ Window {
                 topMargin:1
                 leftMargin:4
             }
-            text:KrakenZDriver.fanDuty + " %";
+            text:DeviceConnection.fanDuty + " %";
             font.family: "Cambria"
         }
         PreviewContainer{
@@ -251,6 +251,16 @@ Window {
                 spread:0
                 samples:32
                 color: "#000000"
+            }
+            onDetached:{
+                if(!detached){
+                    window.flags ^= Qt.WindowStaysOnBottomHint
+                    window.showMinimized();
+                    window.showNormal();
+                    window.flags = Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowStaysOnTopHint |
+                                                 Qt.WindowSystemMenuHint | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint
+                    window.raise();
+                }
             }
         }
         Rectangle{
@@ -463,7 +473,7 @@ Window {
 
         Text{
             id: setFanLabel
-            text:"Set Fan Duty"
+            text:"Fan Duty"
             font.family: "Constantia"
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
@@ -506,7 +516,7 @@ Window {
             from: 0
             to: 100
             stepSize:1
-            value:KrakenZDriver.fanDuty
+            value:DeviceConnection.fanDuty
             handle:Rectangle{
                 color: "#655e71"
                 border.color: "#b9b9b9"
@@ -538,8 +548,8 @@ Window {
             }
 
             onValueChanged: {
-                if(KrakenZDriver.initialized()) {
-                    KrakenZDriver.setFanDuty(value);
+                if(DeviceConnection.initialized()) {
+                    DeviceConnection.setFanDuty(value);
                 }
             }
 
@@ -575,7 +585,7 @@ Window {
 
         Text{
             id: setPumpLabel
-            text:"Set Pump Duty"
+            text:"Pump Duty"
             font.family: "Constantia"
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
@@ -613,7 +623,7 @@ Window {
                 right:fullPumpLabel.left
             }
             snapMode:Slider.SnapAlways
-            value:KrakenZDriver.pumpDuty
+            value:DeviceConnection.pumpDuty
             live:false
             from: 20
             to: 100
@@ -649,8 +659,8 @@ Window {
             }
             height: 36
             onValueChanged: {
-                if(KrakenZDriver.initialized()){
-                    KrakenZDriver.setPumpDuty(value);
+                if(DeviceConnection.initialized()){
+                    DeviceConnection.setPumpDuty(value);
                 }
             }
 
@@ -683,7 +693,7 @@ Window {
         }
         Text{
             id: setBrightnessLabel
-            text:"Set LCD Brightness"
+            text:"LCD Brightness"
             font.family: "Constantia"
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
@@ -725,7 +735,7 @@ Window {
             from: 0
             to: 100
             stepSize:1
-            value:KrakenZDriver.brightness
+            value:DeviceConnection.brightness
             handle:Rectangle{
                 color: "#655e71"
                 border.color: "#b9b9b9"
@@ -760,8 +770,8 @@ Window {
                 if(previewContainer) {
                     previewContainer.brightness = value
                 }
-                if(KrakenZDriver.initialized()) {
-                    KrakenZDriver.setBrightness(value);
+                if(DeviceConnection.initialized()) {
+                    DeviceConnection.setBrightness(value);
                 }
             }
 
@@ -796,7 +806,7 @@ Window {
 
         Text{
             id: setOrientationLabel
-            text:"Set Orientation"
+            text:"Orientation"
             font.family: "Constantia"
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
@@ -836,8 +846,8 @@ Window {
             snapMode:Slider.SnapOnRelease
             live:true
             from: 0
-            to: 270
-            value: KrakenZDriver ? KrakenZDriver.rotationOffset:0
+            to: 359
+            value: DeviceConnection ? DeviceConnection.rotationOffset:0
             stepSize:unlockRotation.checked ? 90:1
             handle:Rectangle{
                 color: "#655e71"
@@ -870,7 +880,7 @@ Window {
             }
 
             onValueChanged: {
-                if(KrakenZDriver.initialized()) {
+                if(DeviceConnection.initialized()) {
                     AppController.setOrientationFromAngle(value);
                 }
             }
@@ -919,7 +929,7 @@ Window {
         Text{
             id: rightOrientationLabel
             color:"white"
-            text:"270"
+            text:"359"
             rightPadding:16
             horizontalAlignment: Text.AlignHCenter
             anchors{
@@ -997,7 +1007,7 @@ Window {
                     anchors.fill: parent
                     onClicked: {
                         AppController.setBuiltIn(false);
-                        KrakenZDriver.setNZXTMonitor();
+                        DeviceConnection.setNZXTMonitor();
                     }
                 }
             }
@@ -1007,7 +1017,7 @@ Window {
                 width:74
                 Text{
                     anchors.fill: parent
-                    text:"Set Qml"
+                    text:"Set\nModule"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -1015,11 +1025,12 @@ Window {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        if(fileLoader.folder.length == 0){
-                            fileLoader.folder = ApplicationData;
-                        }
-                        fileLoader.filterIndex = 1;
-                        fileLoader.active = true;
+//                        if(fileLoader.folder.length == 0){
+//                            fileLoader.folder = ApplicationData;
+//                        }
+//                        fileLoader.filterIndex = 1;
+//                        fileLoader.active = true;
+                        installedLoader.active = true;
                     }
                 }
             }
@@ -1038,7 +1049,7 @@ Window {
                     anchors.fill: parent
                     onClicked: {
                         AppController.setBuiltIn(true);
-                        KrakenZDriver.setBuiltIn(1);
+                        DeviceConnection.setBuiltIn(1);
                     }
                 }
             }
@@ -1057,8 +1068,8 @@ Window {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        if(KrakenZDriver.initialized()) {
-                            KrakenZDriver.blankScreen();
+                        if(DeviceConnection.initialized()) {
+                            DeviceConnection.blankScreen();
                         }
                     }
                 }
@@ -1077,7 +1088,9 @@ Window {
                     if(files.length > 0){
                         var selectedPath = files[0].toString();
                         fileLoader.folder = folder;
-                        if(selectedPath.indexOf(".qml") >= 0){ // app
+                        if(selectedPath.indexOf(".json") >= 0) { // module manifest
+
+                        }else if(selectedPath.indexOf(".qml") >= 0){ // app
                             console.log("Loading Qml: " + selectedPath);
                             AppController.loadQmlFile(selectedPath)
                         }else{
@@ -1129,10 +1142,43 @@ Window {
         }
 
         Component.onCompleted:{
-            unlockRotation.checked = (KrakenZDriver.rotationOffset % 90 == 0)
+            unlockRotation.checked = (DeviceConnection.rotationOffset % 90 == 0)
             window.flags += (Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowStaysOnTopHint |
                              Qt.WindowSystemMenuHint | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint)
             window.raise()
+        }
+    }
+    Loader{
+        id:installedLoader
+        active:false
+        anchors.fill: parent
+        anchors.topMargin: 164
+        sourceComponent:InstalledModules{
+            onModuleSelected: {
+                if(module.entry) {
+                    KZP.loadManifest(module);
+                }
+                installedLoader.active = false;
+            }
+            onOpenFromFile:{
+                installedLoader.active = false;
+                if(fileLoader.folder.length == 0){
+                    fileLoader.folder = ApplicationData;
+                }
+                fileLoader.filterIndex = 1;
+                fileLoader.active = true;
+            }
+
+            onCanceled:{
+                installedLoader.active = false;
+            }
+        }
+        onItemChanged:{
+            if(item) {
+                Modules.getInstalledModules();
+            }else {
+                Modules.releaseModulesCache();
+            }
         }
     }
 }

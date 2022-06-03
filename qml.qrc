@@ -14,5 +14,11 @@
         <file>qml/LCDPreview.qml</file>
         <file>qml/PreviewOverlay.qml</file>
         <file>qml/AttachedPreview.qml</file>
+        <file>qml/SelectModule.qml</file>
+        <file>qml/InstalledModules.qml</file>
+        <file>qml/ModuleDelegate.qml</file>
+        <file>qml/System.qml</file>
+        <file>qml/ContentTray.qml</file>
+        <file>qml/DeleteGauge.qml</file>
     </qresource>
 </RCC>

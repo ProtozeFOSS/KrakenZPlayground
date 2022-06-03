@@ -1,12 +1,14 @@
-QT += widgets quick multimedia network
+QT += widgets quick multimedia network concurrent
 
-CONFIG += c++20
+CONFIG += c++latest
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 #DEFINES += ENABLE_LOGGING
+
+#DEFINES += _ITERATOR_DEBUG_LEVEL = 1
 
 SOURCES += \
         kraken_appcontroller.cpp \
@@ -17,13 +19,51 @@ SOURCES += \
         main.cpp \
         modules.cpp \
         preview_provider.cpp \
+        preview_window.cpp \
         settings.cpp \
+        system_monitor.cpp \
         system_tray.cpp
 
 RESOURCES += qml.qrc \
     images.qrc
 
 include(QtUsb/src/usb/files.pri)
+#include(lhwm-cpp-wrapper/lhwm-cpp-wrapper.pri)
+win32:contains(QMAKE_TARGET.arch, x86_64) {
+    LIBS +=                                                             \
+        -lws2_32                                                        \
+        -lole32                                                         \
+}
+
+win32:contains(QMAKE_TARGET.arch, x86) {
+    LIBS +=                                                             \
+        -lws2_32                                                        \
+        -lole32                                                         \
+}
+
+win32:DEFINES +=                                                        \
+    _MBCS                                                               \
+    WIN32                                                               \
+    _CRT_SECURE_NO_WARNINGS                                             \
+    _WINSOCK_DEPRECATED_NO_WARNINGS                                     \
+    WIN32_LEAN_AND_MEAN                                                 \
+
+win32:{
+    INCLUDEPATH += lhwm-cpp-wrapper
+    DEPENDPATH += lhwm-cpp-wrapper
+    HEADERS += lhwm-cpp-wrapper/lhwm-cpp-wrapper.h
+    INCLUDEPATH += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Include/um" \
+    LIBS += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Lib/um/x64/mscoree.lib" \
+}
+
+win32:CONFIG(debug, debug|release) {
+LIBS += -L$$PWD/lhwm-cpp-wrapper/x64/Debug -llhwm-cpp-wrapper
+}
+
+win32:CONFIG(release, debug|release) {
+    LIBS += -L$$PWD/lhwm-cpp-wrapper/x64/Release -llhwm-cpp-wrapper
+}
+
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -46,12 +86,8 @@ HEADERS += \
     kzp_keys.h \
     modules.h \
     preview_provider.h \
+    preview_window.h \
     settings.h \
+    system_monitor.h \
     system_tray.h
 
-DISTFILES += \
-    examples/Clock/Clock.qml \
-    examples/KZP_Clock/kzp_clock.qml \
-    examples/Krakify/Krakify.qml \
-    examples/LCARS_Clock/LCARS_Clock.qml \
-    examples/Monitor/Monitor.qml \
