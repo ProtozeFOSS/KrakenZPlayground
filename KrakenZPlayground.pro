@@ -1,6 +1,6 @@
 QT += widgets quick multimedia network
 CONFIG += c++latest
-
+CONFIG += monitor
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
@@ -27,27 +27,35 @@ RESOURCES += qml.qrc \
     images.qrc
 
 include(QtUsb/src/usb/files.pri)
-#include(lhwm-cpp-wrapper/lhwm-cpp-wrapper.pri)
-win32:contains(QMAKE_TARGET.arch, x86_64) {
-    LIBS +=                                                             \
-        -lws2_32                                                        \
-        -lole32                                                         \
-}
 
-win32:contains(QMAKE_TARGET.arch, x86) {
-    LIBS +=                                                             \
-        -lws2_32                                                        \
-        -lole32                                                         \
-}
 
-win32:DEFINES +=                                                        \
-    _MBCS                                                               \
-    WIN32                                                               \
-    _CRT_SECURE_NO_WARNINGS                                             \
-    _WINSOCK_DEPRECATED_NO_WARNINGS                                     \
-    WIN32_LEAN_AND_MEAN                                                 \
+monitor:linux{
+    message("Using Linux Sensor Monitoring")
+    INCLUDEPATH += dep/libsensors-cpp/include/
+    DEPENDPATH += dep/libsensors-cpp/src/
+    SOURCES +=  sensor_reader_linux.cpp \
+                dep/libsensors-cpp/src/sensors.cpp \
+                dep/libsensors-cpp/src/error.cpp
+    LIBS += -lsensors
+}
 
 win32:{
+
+    DEFINES +=                                                          \
+        _MBCS                                                           \
+        WIN32                                                           \
+        _CRT_SECURE_NO_WARNINGS                                         \
+        _WINSOCK_DEPRECATED_NO_WARNINGS                                 \
+        WIN32_LEAN_AND_MEAN                                             \
+    LIBS +=                                                             \
+        -lws2_32                                                        \
+        -lole32
+}
+
+monitor:win32{
+    message("Using LHWM sensor monitoring (Windows)")
+    SOURCES += \
+    sensor_reader_windows.cpp
     INCLUDEPATH += lhwm-cpp-wrapper
     DEPENDPATH += lhwm-cpp-wrapper
     HEADERS += lhwm-cpp-wrapper/lhwm-cpp-wrapper.h
@@ -57,11 +65,11 @@ win32:{
     QMAKE_LFLAGS_WINDOWS += /MANIFESTUAC:level=\'requireAdministrator\'
 }
 
-win32:CONFIG(debug, debug|release) {
-LIBS += -L$$PWD/lhwm-cpp-wrapper/x64/Debug -llhwm-cpp-wrapper
+monitor:win32:CONFIG(debug, debug|release) {
+    LIBS += -L$$PWD/lhwm-cpp-wrapper/x64/Debug -llhwm-cpp-wrapper
 }
 
-win32:CONFIG(release, debug|release) {
+monitor:win32:CONFIG(release, debug|release) {
     LIBS += -L$$PWD/lhwm-cpp-wrapper/x64/Release -llhwm-cpp-wrapper
 }
 

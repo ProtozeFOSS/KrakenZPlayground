@@ -5,3 +5,7 @@
 [submodule "RadialBar_arunpkqt"]
 	path = examples/Krakify/RadialBar_arunpkqt
 	url = https://github.com/arunpkqt/RadialBarDemo.git
+
+[submodule "dep/libsensors-cpp"]
+	path = dep/libsensors-cpp
+	url = https://github.com/sfranzen/libsensors-cpp
