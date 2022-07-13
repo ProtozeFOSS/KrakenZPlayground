@@ -13,7 +13,7 @@ Item{
             fillMode:Image.PreserveAspectFit
             anchors.fill: parent
             anchors.margins: 2
-            source:model.modelData.icon
+            source:modelData.icon
         }
     }
     Text{
@@ -24,6 +24,6 @@ Item{
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top:iconRect.bottom
         anchors.bottom: parent.bottom
-        text:model.modelData.name
+        text:modelData.name
     }
 }

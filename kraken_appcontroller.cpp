@@ -188,7 +188,7 @@ void KrakenAppController::userComponentReady()
     if(mCurrentComponent->isReady()){
         mCurrentApp = qobject_cast<QQuickItem*>(mCurrentComponent->create());
         auto errors = mCurrentComponent->errors();
-        if(mCurrentComponent->errors().size()){
+        if(!mCurrentApp | mCurrentComponent->errors().size()){
             for(const auto& error: qAsConst(errors)){
                 qDebug() << error;
             }

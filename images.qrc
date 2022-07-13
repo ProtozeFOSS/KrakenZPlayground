@@ -16,5 +16,7 @@
         <file>images/folder.png</file>
         <file>images/arrow.svg</file>
         <file>images/trash_catch.gif</file>
+        <file>images/refresh-cw.svg</file>
+        <file>images/trash-2.svg</file>
     </qresource>
 </RCC>

@@ -1,5 +1,4 @@
-QT += widgets quick multimedia network concurrent
-
+QT += widgets quick multimedia network
 CONFIG += c++latest
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -52,8 +51,10 @@ win32:{
     INCLUDEPATH += lhwm-cpp-wrapper
     DEPENDPATH += lhwm-cpp-wrapper
     HEADERS += lhwm-cpp-wrapper/lhwm-cpp-wrapper.h
-    INCLUDEPATH += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Include/um" \
-    LIBS += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Lib/um/x64/mscoree.lib" \
+    INCLUDEPATH += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Include/um"
+    LIBS += "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.8/Lib/um/x64/mscoree.lib"
+    CONFIG += embed_manifest_exe
+    QMAKE_LFLAGS_WINDOWS += /MANIFESTUAC:level=\'requireAdministrator\'
 }
 
 win32:CONFIG(debug, debug|release) {

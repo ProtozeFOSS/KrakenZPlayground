@@ -1155,7 +1155,7 @@ Window {
         anchors.topMargin: 164
         sourceComponent:InstalledModules{
             onModuleSelected: {
-                if(module.entry) {
+                if(module && module.entry) {
                     KZP.loadManifest(module);
                 }
                 installedLoader.active = false;

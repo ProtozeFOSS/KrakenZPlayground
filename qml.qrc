@@ -19,6 +19,6 @@
         <file>qml/ModuleDelegate.qml</file>
         <file>qml/System.qml</file>
         <file>qml/ContentTray.qml</file>
-        <file>qml/DeleteGauge.qml</file>
+        <file>qml/SliderGauge.qml</file>
     </qresource>
 </RCC>

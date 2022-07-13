@@ -13,6 +13,7 @@ Rectangle{
 
         }
     }
+    property var moduleList:[]
 
     signal moduleSelected(module: var);
     signal canceled();
@@ -23,7 +24,10 @@ Rectangle{
             var moduleText = "Found: " + module.name;
             if(statusText.text == "") {
                 statusText.text = moduleText;
+                background.moduleList.push(module);
+                //moduleView.model = background.moduleList;
             } else {
+
                 statusWindow.messages.push(moduleText);
                 if(!textTimer.running) {
                     textTimer.start()
@@ -40,11 +44,11 @@ Rectangle{
                     textTimer.start()
                 }
             }
-
-
-            if(module_list.length != moduleView.model.length) {
-                moduleView.model = module_list;
+            background.moduleList = []
+            for(var i =0; i < module_list.length; ++i) {
+                background.moduleList.push(module_list[i]);
             }
+            moduleView.model = background.moduleList;
         }
     }
 
@@ -84,7 +88,7 @@ Rectangle{
             MouseArea{
                 anchors.fill: parent
                 onClicked:{
-                    contentTray.contentObject = modelData;
+                    contentTray.contentObject = background.moduleList[index];
                     openTray.stop();
                     toggleTray.start();
                     moduleView.currentIndex = index;
@@ -94,7 +98,8 @@ Rectangle{
         highlightFollowsCurrentItem: true
         cellHeight:94
         cellWidth:82
-        model:[]
+        model:background.moduleList
+
         onCountChanged: {
             if(count == 0) {
                 openTray.stop();
@@ -114,24 +119,22 @@ Rectangle{
         width:parent.width* .98
         onDeleteContent: {
             let index = moduleView.currentIndex;
-            let item = moduleView.model[index];
+            let item = background.moduleList[index];
             console.log("Removed item: " + item.name);
-            if(moduleView.model.length > 1) {
-                let oldModel = moduleView.model;
-                oldModel.splice(index, 1);
-                moduleView.model = oldModel;
+            if(background.moduleList.length > 1) {
+                background.moduleList.slice(index, 1);
                 if(index > 0) {
                     moduleView.currentIndex = index-1;
-                    contentTray.contentObject = moduleView.model[index-1];
+                    contentTray.contentObject = background.moduleList[index-1];
                 } else {
                     moduleView.currentIndex = 0;
-                    contentTray.contentObject = moduleView.model[0];
+                    contentTray.contentObject = background.moduleList[index];
                 }
                 openTray.stop();
                 toggleTray.start();
             }else {
                 console.log("Removing last");
-                moduleView.model = [];
+                background.moduleList = []
                 contentTray.contentObject = null;
             }
         }
@@ -298,7 +301,7 @@ Rectangle{
             anchors.fill: parent
             onClicked:{
                 background.canceled();
-                // Modules.toggleModuleManager(true);
+                Modules.toggleModuleManager(true);
             }
             hoverEnabled:true
             onEntered:{
@@ -423,7 +426,7 @@ Rectangle{
             anchors.fill: parent
             onClicked:{
                 if(moduleView.currentItem) {
-                    background.moduleSelected(moduleView.model[moduleView.currentIndex]);
+                    background.moduleSelected(background.moduleList[moduleView.currentIndex]);
                 }
             }
         }

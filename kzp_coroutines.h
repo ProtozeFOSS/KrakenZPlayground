@@ -58,6 +58,7 @@ static QJsonObject generateErrorObject(QNetworkReply::NetworkError error)
 }
 
 typedef QPair<QString, QString> FileRequest;
+typedef QPair<QString, QByteArray> FileReply;
 
 class FileFetcher : public QObject
 {
@@ -68,12 +69,16 @@ public:
 
     void fetchFiles(QVector<FileRequest>& requests)
     {
-        mRequests = &requests;
+        mQueued = 0;
+        mRequests = requests;
         queueRequests();
     }
+    const QVector<FileReply>& getFiles(){return mProcessed;}
     void cancel()
     {
-
+        if(mRunning){
+            cleanUp();
+        }
     }
 
 signals:
@@ -105,14 +110,15 @@ protected slots:
     {
         auto reply{qobject_cast<QNetworkReply*>(sender())};
         if(reply->error() == QNetworkReply::NoError) {
-            auto path = reply->request().url().path();
-            ++mProcessed;
-            emit fileReceived(path,reply->readAll());
+            auto path = reply->request().url().toString();
+            auto data{reply->readAll()};
+            mProcessed.append(FileReply(path,data));
+            emit fileReceived(path,data);
+            --mQueued;
         }
         reply->deleteLater();
-        --mReplyCount;
-        if(mProcessed == mRequests->size()) {
-            // Finished;
+        if(mRequests.size() == 0) {
+            mRunning = false;
             emit finishedRequests();
         }else {
             queueRequests();
@@ -154,20 +160,27 @@ protected:
     }
     void queueRequests()
     {
-        auto remaining{mRequests->size() - mProcessed};
-        auto replySlots = qMin(6 - mReplyCount, remaining);
-        for(int index{0}; index < replySlots; ++index)
+        while(mQueued <= 6 && mRequests.size() > 0)
         {
-            // create a newtwork request for the file
-            auto request = mRequests->at(mProcessed + index);
-            createNetworkRequest(request);
+            // create a network request for the file
+            createNetworkRequest(mRequests.takeFirst());
+            ++mQueued;
         }
-
+        if(mQueued > 0) {
+            mRunning = true;
+        }
+    }
+    void cleanUp()
+    {
+        // clean up all vectors and processed data
+        mRunning = false;
     }
     QString                 mWritePath;
-    QVector<FileRequest>*   mRequests;
-    int                     mProcessed;
+    QVector<FileRequest>    mRequests;
+    QVector<FileReply>      mProcessed;
+    int                     mQueued;
     int                     mReplyCount;
+    bool                    mRunning;
     QNetworkAccessManager   mNam;
     QByteArray              mUserAgent;
     QDataStream             mFileStream;
@@ -415,6 +428,8 @@ protected:
     QJsonArray mImages;
 };
 
+typedef std::pair<QString, QJsonObject> ObjectReply;
+
 /************************ Fetch Manifest Files Couroutine *****************************
  * Input: network reply, fileList, retryCount, userAgent
  *
@@ -439,9 +454,11 @@ signals:
                  KZPCoroutines::ErrorAction error_type = ErrorAction::RECOVERABLE);
 
     void progressChanged(int percent);
-    void taskStarted(QString task, KZPCoroutines::TaskType type);
-    void taskFinished(QString task, KZPCoroutines::TaskType type);
-    void manifestFilesReceived(const QVector<QJsonObject>& manifestFiles);
+    void taskStarted(const QString task, KZPCoroutines::TaskType type);
+    void taskFinished(const QString task, KZPCoroutines::TaskType type);
+    void objectReceived(const QString url, QJsonObject obj);
+    void manifestFilesReceived();
+    void done();
 
    // (Input) interface
 
@@ -457,6 +474,7 @@ public:
     QString taskName;
     QByteArray userAgent{USER_AGENT};
     QVector<FileRequest> fileList;
+    QVector<ObjectReply>& getFiles(){ return mManifestFiles; }
 
     // Output
     bool hadError{false};
@@ -490,11 +508,16 @@ public slots:
         connect(mFetcher, &FileFetcher::fileReceived, this, [this](QString path, QByteArray data){
             auto doc{QJsonDocument::fromJson(data)};
             if(doc.isObject()) {
-                mManifestFiles.append(doc.object());
+                auto obj{doc.object()};
+                mManifestFiles.append(ObjectReply(path, obj));
+                emit objectReceived(path, obj);
             }
             emit taskFinished(path, TaskType::FETCH_MANIFEST);
             if(mManifestFiles.size() == fileList.size()) {
-                emit manifestFilesReceived(mManifestFiles);
+                QTimer::singleShot(100, this, [this](){
+                   emit manifestFilesReceived();
+                   emit done();
+                });
             }
         });
         mFetcher->fetchFiles(fileList);
@@ -512,12 +535,13 @@ protected:
     short        mIndex;
     QTimer*      mTimer;
     FileFetcher* mFetcher;
-    QVector<QJsonObject> mManifestFiles;
+    QVector<ObjectReply> mManifestFiles;
 };
 
 
 }; // end Network Coroutines
 
+Q_DECLARE_METATYPE(KZPCoroutines::ObjectReply);
 Q_DECLARE_METATYPE(KZPCoroutines::TaskType)
 
 #endif // KZP_COROUTINES_H

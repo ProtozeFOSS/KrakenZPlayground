@@ -36,8 +36,7 @@ protected:
     qint64 mElapsed;
 };
 
-class
-        KrakenAppController : public QObject
+class KrakenAppController : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickItem* container  NOTIFY containerChanged MEMBER mContainer)

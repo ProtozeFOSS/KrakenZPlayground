@@ -551,11 +551,11 @@ void KZPController::receivedInstalledManifests(QVector<QJsonObject> local_manife
 
 }
 
-void KZPController::receivedModuleManifests(QVector<QJsonObject> manifests)
+void KZPController::receivedModuleManifests(QVector<ObjectReply> manifests)
 {
     qDebug() << "Received " << manifests.size() << " Manifests ";
     for(const auto & manifest: qAsConst(manifests)) {
-        qDebug() << manifest;
+        qDebug() << manifest.second;
     }
 }
 
@@ -574,22 +574,23 @@ void KZPController::releaseMainWindow()
 
 void KZPController::setUxObjects()
 {
+    mUxEngine->rootContext()->setContextProperty("KZP", this);
+    mUxEngine->rootContext()->setContextProperty("Modules", &mModuleManager);
+    if(mKrakenAppController && mHWMonitor) {
+        mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
+        mUxEngine->rootContext()->setContextProperty("SystemMonitor", mHWMonitor);
+        mKrakenAppController->setSystemMonitor(mHWMonitor);
+    }
+    mUxEngine->rootContext()->setContextProperty("Preview", &mPreview);
+    mUxEngine->rootContext()->setContextProperty("DeviceConnection", mController);
+    mUxEngine->rootContext()->setContextProperty("ApplicationData", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     if(!mUxEngine->imageProvider("krakenz")){
         auto previewProvider {new ProxyImageProvider()}; // uses preview
-        mUxEngine->rootContext()->setContextProperty("KZP", this);
-        mUxEngine->rootContext()->setContextProperty("Modules", &mModuleManager);
-        if(mKrakenAppController && mHWMonitor) {
-            mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
-            mUxEngine->rootContext()->setContextProperty("SystemMonitor", mHWMonitor);
-            mKrakenAppController->setSystemMonitor(mHWMonitor);
-        }
-        mUxEngine->rootContext()->setContextProperty("Preview", &mPreview);
-        mUxEngine->rootContext()->setContextProperty("DeviceConnection", mController);
         mUxEngine->addImageProvider("krakenz", previewProvider); // will be owned by the engine
         mUxEngine->rootContext()->setContextProperty("KrakenImageProvider", previewProvider);
         QObject::connect(mKrakenAppController, &KrakenAppController::frameReady, previewProvider, &ProxyImageProvider::imageChanged);
-        mUxEngine->rootContext()->setContextProperty("ApplicationData", QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     }
+
 }
 
 void KZPController::showMainWindow()

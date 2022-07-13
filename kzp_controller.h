@@ -166,7 +166,7 @@ protected slots:
     void showMainWindow();
     void setMainWindow();
     void receivedInstalledManifests(QVector<QJsonObject>);
-    void receivedModuleManifests(QVector<QJsonObject>);
+    void receivedModuleManifests(QVector<ObjectReply>);
     void releaseMainWindow();
 
     // module slots

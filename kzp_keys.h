@@ -32,6 +32,8 @@ namespace SharedKeys{
     static QString Url{QStringLiteral("url")};
     static QString Icon{QStringLiteral("icon")};
     static QString Files{QStringLiteral("files")};
+    static QString Images{QStringLiteral("images")};
+    static QString Modules{QStringLiteral("modules")};
     static QString Dependencies{QStringLiteral("dependencies")};
     static QString X{QStringLiteral("x")};
     static QString Y{QStringLiteral("y")};

@@ -6,7 +6,6 @@
 #include <QMap>
 #include <QString>
 #include <QJsonArray>
-#include <QFuture>
 
 #include "kzp_coroutines.h"
 using namespace KZPCoroutines;
@@ -19,22 +18,63 @@ namespace Modules{
 namespace ModuleUtility{
 
     enum ModuleType{
-        QML = 0,        // qml
-        ANIMATION = 1,  // gif
-        IMAGE = 2,      // image
-        REPOSITORY = 3  // repo
+        MODULE = 0,     // qml
+        ANIMATION = 1,  // Animation image
+        IMAGE = 2,      // static image
+        REPO = 3        // modules repo
     };
 
     struct ModuleManifest{
-        QString    name;
-        QString    folder;
-        QString    url;
-        ModuleType type;
-        quint32    version;
+        QString     name;
+        QString     folder;
+        QString     url;
+        ModuleType  type;
+        quint32     version;
+        QStringList files;
     };
+
+    struct ImageManifest{
+        QString     name;
+        QString     entry;
+        QString     reference;
+    };
+
+
+    struct Repository{
+        QString     name;
+        QString     folder;
+        QString     url;
+        QStringList images;
+        QStringList modules;
+    };
+
+    enum ActionType{
+        DOWNLOAD   = 0,   // Download using NAM
+        INSTALL    = 1,   // Install
+        FETCH      = 2,   // Fetch manifest/repo (json)
+        SEARCH     = 3    // Look at HDD for current installed
+    };
+
+    struct Action{
+        QString source;
+        QString destination;
+        QString data;
+    };
+    typedef QList<Action> ActionList;
+
+    struct InstalledModule{
+        ModuleManifest manifest;
+        bool           needUpdate = false;
+        bool           inUse = false;
+    };
+
+    typedef QList<InstalledModule> InstalledList;
 
     static ModuleManifest createManifestFromJson(QString json_str);
     static ModuleManifest createManifestFromJsObject(QJsonObject obj);
+
+   // static Repository createRepositoryFromJson(QString json_str);
+   // static Repository createRepositoryFromJsObject(QJsonObject obj);
 
 };
 
@@ -68,7 +108,10 @@ public:
     Q_INVOKABLE bool openExplorerAt(QString path);
 
     // repository commands
-    Q_INVOKABLE QJsonArray getRepoModuleManifests(QJsonObject repo);
+    Q_INVOKABLE void fetchRepoData(QJsonObject repo);
+    Q_INVOKABLE void addRepo(QJsonObject repo);
+    Q_INVOKABLE bool removeRepo(QJsonObject repo);
+    Q_INVOKABLE void testRepo(QString url);
    // Q_INVOKABLE QJsonArray getRepoImageManifests(QJsonObject repo);
 
 signals:
@@ -79,7 +122,7 @@ signals:
     void taskStarted(QString file, KZPCoroutines::TaskType type);
     void taskFinished(QString file, KZPCoroutines::TaskType type);
     void installedModulesCheck(QVector<QJsonObject> local_manifests);
-    void moduleManifests(QVector<QJsonObject> manifests);
+    void moduleManifests(const QVector<ObjectReply>& manifests);
     void modulesNeedUpdated(QJsonObject modules);
 
 
@@ -96,11 +139,14 @@ signals:
 
     // repo image finder
     void repoImageManifestReceived(QJsonObject manifest);
-    void repoImagesReceived(QJsonArray imageManifests);
+    void repoImagesReceived(const QVector<ObjectReply>& manifestFiles);
+    void repoImageReceived(const QString url, QJsonObject imageManifest);
 
     // repo module finder
     void repoModuleManifestReceived(QJsonObject module);
     void repoModulesRecieved(QJsonArray modules);
+
+    void repoTest(QJsonObject data);
 
 public slots:
      void toggleModuleManager(bool open);
@@ -117,10 +163,18 @@ protected:
     QQmlApplicationEngine*                 mModuleEngine;
     QQuickWindow*                          mModuleWindow;
 
+    bool repoExists(const QJsonArray &repos, QString name, QString url);
+    bool verifyRepo(QJsonObject &repo, bool &exists);
+
 protected slots:
     void createManager();
+    void failedRepoTest();
+    void writeRepos(QJsonArray repos);
+    void verifyFetchedImageManifests();
+    void verifyFetchedImageManifest(const QString url, QJsonObject data);
+    void receivedRepoTest();
     void releaseManager();
-    void receivedFiles(const QVector<QJsonObject> manifestFiles);
+    void receivedFiles();
     void fetchModulesError(QString error);
     void cleanupLocalModuleCache();
     void cleanupFetchImageFiles();
