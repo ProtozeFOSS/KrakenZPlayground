@@ -22,7 +22,7 @@ static constexpr char PERMISSION_ERROR[] = "qrc:/qml/PermissionDenied.qml";
 static constexpr char SETTINGS_ERROR[] = "qrc:/qml/SettingsError.qml";
 static constexpr char MISSING_PROFILE[] = "qrc:/qml/MissingProfile.qml";
 
-
+SystemMonitor* KZPController::mSystemMonitor = nullptr;
 
 #ifdef Q_OS_LINUX
 constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if another process has control\n of the Kraken Z and UDEV rules are setup correctly";
@@ -34,7 +34,7 @@ constexpr char OPEN_DENIED_STR[] = "Failed to open root USB device\n\nCheck if a
 KZPController::KZPController(QApplication *parent)
     : QObject{parent}, mUxEngine{nullptr}, mState{ApplicationState::STARTING},
       mController{nullptr}, mKrakenAppController{nullptr}, mApplicationIcon{nullptr}, mSystemTray{nullptr},
-      mPreviewWindow{nullptr}, mPreview{this}, mModuleManager{this}, mHWMonitor{nullptr}
+      mPreviewWindow{nullptr}, mPreview{this}, mModuleManager{this}
 {
     connect(parent, &QApplication::aboutToQuit, this, &KZPController::applicationQuiting);
     if(parent){
@@ -63,7 +63,7 @@ void KZPController::configured()
     if(mState == ApplicationState::CONFIGURE_DRIVER)
     {
         mState = ApplicationState::FOREGROUND;
-        mHWMonitor = new SystemMonitor(this);
+        mSystemMonitor = new SystemMonitor(this);
         QTimer::singleShot(400, this, [this]{
             if(mController && mKrakenAppController) {
                 mController->setBuiltIn(0);
@@ -120,8 +120,8 @@ void KZPController::applicationInitialize()
 void KZPController::applicationQuiting() // close up shop
 {
     if(mUxEngine || mController || mKrakenAppController) {
-        if(mHWMonitor){
-            mHWMonitor->aboutToExit();
+        if(mSystemMonitor){
+            mSystemMonitor->aboutToExit();
         }
         if(mController) {
             mController->setNZXTMonitor();
@@ -132,8 +132,8 @@ void KZPController::applicationQuiting() // close up shop
         if(mState == ApplicationState::BACKGROUND || mState == ApplicationState::FOREGROUND || mState == ApplicationState::DETACHED) {
             writeSettingsFile();
         }
-        QTimer::singleShot(100,this, [this](){
-            cleanUp();
+        QTimer::singleShot(100,this,[](){
+            //cleanUp();
             QCoreApplication::quit();
         });
     }
@@ -250,6 +250,10 @@ bool KZPController::createDeviceController()
     return success;
 }
 
+SystemMonitor* KZPController::getSystemMonitor()
+{
+    return mSystemMonitor;
+}
 
 bool KZPController::setSoftwareController()
 {
@@ -297,6 +301,13 @@ void KZPController::writeSettingsFile()
         }
         auto previewData{mPreview.profileData()};
         currentProfile.insert("preview" , previewData);
+        if(mSystemMonitor) {
+            auto sensorData{mSystemMonitor->jsonSettings()};
+            auto sensor_path = getSensorPath();
+            if(!sensorData.isEmpty() && sensor_path.size() > 0) {
+                currentProfile.insert(sensor_path, sensorData);
+            }
+        }
         // find and update it in the array
         auto profiles = existingSettings.value(SharedKeys::Profiles).toArray();
 
@@ -328,7 +339,7 @@ bool KZPController::createKrakenApplicationController()
     auto appPtr{ qobject_cast<QApplication*>(parent())};
     if(appPtr && !mKrakenAppController) {
         // Create the Background Application Controller
-        mKrakenAppController =  new KrakenAppController(&mPreview, mController, mHWMonitor, appPtr);
+        mKrakenAppController =  new KrakenAppController(&mPreview, mController, mSystemMonitor, appPtr);
         mKrakenAppController->setAlphaSize(8); // Configured for Kraken Device, could be adapted to other displays...
         mKrakenAppController->setBlueSize(8);
         mKrakenAppController->setDepthSize(32);
@@ -411,10 +422,17 @@ bool KZPController::initializeMainWindow()
 
 
 void KZPController::loadProfile()
-{    
-    if(!mProfile.isEmpty() && mProfile.contains("preview")){
+{
+    if(mProfile.isEmpty()){
+        return;
+    }
+    if(mProfile.contains("preview")){
         mPreview.setProfileData(mProfile.value("preview").toObject());
     }
+    if(mSystemMonitor) {
+        mSystemMonitor->initializeSensors(mProfile.value(getSensorPath()).toObject());
+    }
+
 }
 
 void KZPController::loadManifest(QJsonObject manifest_obj)
@@ -576,10 +594,10 @@ void KZPController::setUxObjects()
 {
     mUxEngine->rootContext()->setContextProperty("KZP", this);
     mUxEngine->rootContext()->setContextProperty("Modules", &mModuleManager);
-    if(mKrakenAppController && mHWMonitor) {
+    if(mKrakenAppController && mSystemMonitor) {
         mUxEngine->rootContext()->setContextProperty("AppController", mKrakenAppController);
-        mUxEngine->rootContext()->setContextProperty("SystemMonitor", mHWMonitor);
-        mKrakenAppController->setSystemMonitor(mHWMonitor);
+        mUxEngine->rootContext()->setContextProperty("SystemMonitor", mSystemMonitor);
+        mKrakenAppController->setSystemMonitor(mSystemMonitor);
     }
     mUxEngine->rootContext()->setContextProperty("Preview", &mPreview);
     mUxEngine->rootContext()->setContextProperty("DeviceConnection", mController);
@@ -626,7 +644,7 @@ void KZPController::setSettingsConfiguration(QString directory, QString profile_
         case ApplicationState::FOREGROUND:
         case ApplicationState::DETACHED: {// correctly parsed, load user settings
             mProfile = settingsOutput.value("activeProfile").toObject();
-            mHWMonitor = new SystemMonitor(this);
+            mSystemMonitor = new SystemMonitor(this);
             auto kraken_settings = mProfile.value("krakenzdriver").toObject();
             auto software = kraken_settings.value(SharedKeys::Software).toBool(false);
             settingsOutput.remove("activeProfile");
@@ -669,13 +687,13 @@ void KZPController::cleanUp()
     mUxEngine = nullptr;
     delete mKrakenAppController;
     mKrakenAppController = nullptr;
-    auto driverSelect{KrakenZDriverSelect::GetInstance()};
-    driverSelect->releaseDrivers();
     mController = nullptr;
     delete mSystemTray;
     mSystemTray = nullptr;
-    delete mHWMonitor;
-    mHWMonitor = nullptr;
+    delete mSystemMonitor;
+    mSystemMonitor = nullptr;
+    auto driverSelect{KrakenZDriverSelect::GetInstance()};
+    driverSelect->releaseDrivers();
 }
 
 KZPController::~KZPController()

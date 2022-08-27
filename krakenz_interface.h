@@ -122,7 +122,6 @@ signals:
     void fanSpeedChanged(quint16);
     void pumpDutyChanged(quint8);
     void fanDutyChanged(quint8);
-    void fwInfoChanged(QString);
     void versionChanged(QString);
     void deviceReady();
     void rotationOffsetChanged(int);

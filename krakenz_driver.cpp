@@ -50,27 +50,7 @@ void KrakenZDriver::blankScreen()
 
 quint16 KrakenZDriver::calculateMemoryStart(quint8 index)
 {
-    return 800*index; // needs to be 400 - check what the 3401 (query of the assets after they are set)
-}
-
-
-void KrakenZDriver::closeConnections()
-{
-    if(mInitialized){
-        mLCDCTL->close();
-        mLCDDATA->close();
-        mLCDIN->close();
-        mLCDCTL->disconnect();
-        mLCDDATA->disconnect();
-        mLCDIN->disconnect();
-        delete mLCDCTL;
-        mLCDCTL = nullptr;
-        delete mLCDDATA;
-        mLCDDATA = nullptr;
-        delete mLCDIN;
-        mLCDIN = nullptr;
-        mInitialized = false;
-    }
+    return 800*index;
 }
 
 bool KrakenZDriver::initialize(bool& permissionDenied)
@@ -97,7 +77,8 @@ bool KrakenZDriver::initialize(bool& permissionDenied)
                     qDebug() << mKrakenDevice->id() << mKrakenDevice->config();
                 } else { // continue if sccuessfully opened device
                     sendStatusRequest();
-                    QTimer::singleShot(600, this, &KrakenZDriver::sendFWRequest);
+                    mRepeatTimer.start(200);
+                    connect(&mRepeatTimer, &QTimer::timeout, this, &KrakenZDriver::sendFWRequest);
                     mInitialized = true;
                     success = true;
                     mFrames = 0;
@@ -201,11 +182,15 @@ void KrakenZDriver::parseFWVersion(QByteArray &data)
     {
         QString fw(QStringLiteral("0.0.0"));
         fw[0] = QString::number(data.at(17)).at(0);
-        fw[2]=QString::number(data.at(18)).at(0);
+        fw[2]= QString::number(data.at(18)).at(0);
         fw[4]= QString::number(data.at(19)).at(0);
         mVersion = fw;
+        if(mVersion.size() > 0) {
+            mRepeatTimer.stop();
+            mRepeatTimer.disconnect(this);
+        }
         qDebug() << QStringLiteral("KRAKEN FW Version: v") << mVersion;
-        emit fwInfoChanged(mVersion);
+        emit versionChanged(mVersion);
     }
 }
 
@@ -628,6 +613,8 @@ KrakenZDriver::~KrakenZDriver()
         mLCDDATA = nullptr;
         delete mLCDIN;
         mLCDIN = nullptr;
+        mInitialized = false;
     }
     delete mKrakenDevice;
+    mKrakenDevice = nullptr;
 }

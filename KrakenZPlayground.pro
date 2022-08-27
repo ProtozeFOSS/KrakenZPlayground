@@ -19,6 +19,7 @@ SOURCES += \
         modules.cpp \
         preview_provider.cpp \
         preview_window.cpp \
+        sensor_monitor.cpp \
         settings.cpp \
         system_monitor.cpp \
         system_tray.cpp
@@ -96,6 +97,8 @@ HEADERS += \
     modules.h \
     preview_provider.h \
     preview_window.h \
+    sensor_controller.h \
+    sensor_monitor.h \
     settings.h \
     system_monitor.h \
     system_tray.h

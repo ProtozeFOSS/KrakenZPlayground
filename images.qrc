@@ -18,5 +18,14 @@
         <file>images/trash_catch.gif</file>
         <file>images/refresh-cw.svg</file>
         <file>images/trash-2.svg</file>
+        <file>images/fan.png</file>
+        <file>images/high-temperature.png</file>
+        <file>images/electric-current.png</file>
+        <file>images/performance.png</file>
+        <file>images/frequency.png</file>
+        <file>images/factor.png</file>
+        <file>images/cpu.png</file>
+        <file>images/gpu.png</file>
+        <file>images/ram.png</file>
     </qresource>
 </RCC>

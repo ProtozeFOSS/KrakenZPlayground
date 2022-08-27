@@ -20,5 +20,8 @@
         <file>qml/System.qml</file>
         <file>qml/ContentTray.qml</file>
         <file>qml/SliderGauge.qml</file>
+        <file>qml/DeviceDelegate.qml</file>
+        <file>qml/MonitorSettings.qml</file>
+        <file>qml/SensorDelegate.qml</file>
     </qresource>
 </RCC>

@@ -21,7 +21,7 @@ class KrakenImageProvider;
 class SystemTray;
 enum class ApplicationState;
 
-constexpr char APP_VERSION[] = "v1.2RC";
+constexpr char APP_VERSION[] = "v1.2RC2";
 
 
 struct AppSettings{
@@ -82,6 +82,7 @@ public:
     Q_INVOKABLE void setPreviewWindow(QObject* window);
     Q_INVOKABLE void loadManifest(QString manifest_file);
     Q_INVOKABLE void loadManifest(QJsonObject manifest_obj);
+    static SystemMonitor*  getSystemMonitor(); // Todo: return static global
 
 
 signals:
@@ -152,6 +153,7 @@ protected:
     void connectModuleManager();
 
     SystemMonitor*                mHWMonitor;
+    void                          initializeHWMonitor();
 protected slots:
     // When the UX is changed, this method will control what to do
    // void componentReady();
@@ -171,8 +173,16 @@ protected slots:
 
     // module slots
 
-
-
+    protected:
+    static SystemMonitor*         mSystemMonitor; // TODO: finish connecting in
+    QString getSensorPath() {
+#ifdef Q_OS_WIN
+        return  SharedKeys::LHWMSensors;
+#else
+        return SharedKeys::LMSensors;
+#endif
+        return QString{};
+    }
 };
 
 #endif // KZPCONTROLLER_H

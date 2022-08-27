@@ -16,7 +16,8 @@ class PreviewWindow : public QObject
     Q_PROPERTY(bool movementLocked READ movementIsLocked WRITE lockMovement NOTIFY movementLocked MEMBER mLocked)
     Q_PROPERTY(bool settingsOpen READ settingsOpen WRITE showSettings NOTIFY settingsToggled MEMBER mSettings)
     Q_PROPERTY(QString settingsPath READ settingsPath NOTIFY settingsPathChanged MEMBER mSettingsPath)
-    Q_PROPERTY(bool hasSettings READ hasSettings NOTIFY settingsAvailable CONSTANT)
+    Q_PROPERTY(bool hasSettings READ hasSettings NOTIFY settingsAvailable)
+
 public:
 
     qreal x() { return mX; }

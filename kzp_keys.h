@@ -14,8 +14,10 @@
 // (Future) Could be generated
 namespace SharedKeys{
 // General
+    static QString Attributes{QStringLiteral("attributes")};
     static QString ContentType{QStringLiteral("contentType")};
     static QString Type{QStringLiteral("type")};
+    static QString SubType{QStringLiteral("subType")};
     static QString FilePath{QStringLiteral("filePath")};
     static QString Path{QStringLiteral("path")};
     static QString Profiles{QStringLiteral("profiles")};
@@ -23,6 +25,11 @@ namespace SharedKeys{
     static QString Message{QStringLiteral("message")};
     static QString Size{QStringLiteral("size")};
     static QString Name{QStringLiteral("name")};
+    static QString Sensor{QStringLiteral("sensor")};
+    static QString Sensors{QStringLiteral("sensors")};
+    static QString Value{QStringLiteral("value")};
+    static QString Label{QStringLiteral("label")};
+    static QString ReadOnly{QStringLiteral("readOnly")};
     static QString Device{QStringLiteral("device")};
     static QString Folder{QStringLiteral("folder")};
     static QString Version{QStringLiteral("version")};
@@ -37,6 +44,7 @@ namespace SharedKeys{
     static QString Dependencies{QStringLiteral("dependencies")};
     static QString X{QStringLiteral("x")};
     static QString Y{QStringLiteral("y")};
+    static QString PollDelay{QStringLiteral("pollDelay")};
 
     // AIO Related
     static QString PumpDuty{QStringLiteral("pumpDuty")};
@@ -44,6 +52,50 @@ namespace SharedKeys{
     static QString Rotation{QStringLiteral("rotationOffset")};
     static QString Brightness{QStringLiteral("brightness")};
     static QString Software{QStringLiteral("software")};
+    static QString LMSensors{QStringLiteral("linux-sensors")};
+    static QString LHWMSensors{QStringLiteral("windows-sensors")};
+
+    // Sensor Types
+    static QString CPUDieTemp{QStringLiteral("CPU.DieTemp")};
+    static QString CPUPackageTemp{QStringLiteral("CPU.PackageTemp")};
+    static QString CPUAverageTemp{QStringLiteral("CPU.AverageTemp")};
+    static QString CPUWorkLoad{QStringLiteral("CPU.WorkLoad")};
+    static QString CPUWorkLoadTotal{QStringLiteral("CPU.WorkLoadTotal")};
+    static QString CPUFrequency{QStringLiteral("CPU.Frequency")};
+    static QString GPUCoreTemp{QStringLiteral("GPU.CoreTemp")};
+    static QString GPUJunctionTemp{QStringLiteral("GPU.JunctionTemp")};
+    static QString GPUMemoryTemp{QStringLiteral("GPU.MemoryTemp")};
+    static QString GPUMemorySpeed{QStringLiteral("GPU.MemorySpeed")};
+    static QString GPUFanSpeed{QStringLiteral("GPU.FanSpeed")};
+    static QString GPUClockSpeed{QStringLiteral("GPU.ClockSpeed")};
+    static QString GPUMemoryUsed{QStringLiteral("GPU.MemoryUsed")};
+    static QString GPUWorkLoad{QStringLiteral("GPU.WorkLoad")};
+    static QString GPUFrequency{QStringLiteral("GPU.Frequency")};
+    static QString GPUVoltage{QStringLiteral("GPU.Voltage")};
+    static QString GPUWattage{QStringLiteral("GPU.Wattage")};
+
+    static QString Temperature{QStringLiteral("Temperature")};
+    static QString Utilization{QStringLiteral("Utilization")};
+    static QString Speed{QStringLiteral("Speed")};
+    static QString DataSize{QStringLiteral("Data Size")};
+    static QString Frequency{QStringLiteral("Frequency")};
+    static QString Voltage{QStringLiteral("Voltage")};
+    static QString Wattage{QStringLiteral("Wattage")};
+    static QString Current{QStringLiteral("Current")};
+    static QString Minimum{QStringLiteral("Minimum")};
+    static QString Maximum{QStringLiteral("Maximum")};
+    static QString Highest{QStringLiteral("Highest")};
+    static QString Lowest{QStringLiteral("Lowest")};
+    static QString TypeID{QStringLiteral("TypeID")};
+    static QString Data{QStringLiteral("Data")};
+    static QString DataRate{QStringLiteral("DataRate")};
+
+#ifdef Q_OS_LINUX
+    static QString SensorSettings{QStringLiteral("hmonSensors")};
+#endif
+#ifdef Q_OS_WINDOWS
+    static QString SensorSettings{QStringLiteral("lhwmSensors")};
+#endif
 
 };
 

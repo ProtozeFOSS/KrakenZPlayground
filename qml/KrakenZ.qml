@@ -35,6 +35,30 @@ Window {
             leftPadding: 16
             text: DeviceConnection.isSoftware ? "Kraken Z3 ( Software )" : "Kraken Z3"
         }
+        Rectangle{
+            id: settingsButton
+            color:"red"
+            height:24
+            width:160
+            radius:2
+            anchors{
+                right:parent.right
+                top:parent.top
+                topMargin: 4
+            }
+            Text{
+                anchors.fill: parent
+                text:"Settings"
+                color:"white"
+                horizontalAlignment: Text.AlignHCenter
+            }
+            MouseArea{
+                anchors.fill:parent
+                onClicked:{
+                    monitorLoader.active = true;
+                }
+            }
+        }
 
         Rectangle{
             id: deviceSeparator
@@ -1179,6 +1203,28 @@ Window {
             }else {
                 Modules.releaseModulesCache();
             }
+        }
+    }
+    Loader{
+        id:monitorLoader
+        active:false
+        anchors.fill: parent
+        sourceComponent:MonitorSettings{
+            id: monitorSettings
+            anchors.fill: parent
+            onCloseSettings: {
+                monitorLoader.active = false; // TODO: change to loader
+            }
+        }
+    }
+    Component.onCompleted: {
+        let sensorObjs = SystemMonitor.sensorsAvailableToMap();
+        console.log(sensorObjs)
+        //let cpuAverageTemps = SystemMonitor.deviceCount(CPU.AverageTemp);
+        //console.log(sensors);
+        for(var i = 0; i < sensorObjs.length; i++ ) {
+            let sensor = sensorObjs[i];
+            console.log(sensor.name + ": " + sensor.value);
         }
     }
 }

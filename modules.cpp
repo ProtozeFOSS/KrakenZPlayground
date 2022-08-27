@@ -35,7 +35,7 @@ ModuleManager::ModuleManager(QObject *parent)
 ModuleManager::~ModuleManager()
 {
     if(mModuleCacher) {
-        mModuleCacher->terminate();
+        mModuleCacher->exit();
         delete mModuleCacher;
         mModuleCacher = nullptr;
     }

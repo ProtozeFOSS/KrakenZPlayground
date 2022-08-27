@@ -13,7 +13,8 @@
 #include "kzp_controller.h"
 #include "settings.h"
 #include <QTimer>
-
+#include "sensor_monitor.h"
+#include "system_monitor.h"
 
 // HANDLE unix signals (like SIGQUIT for exit on shutdown)
 #ifdef Q_OS_LINUX
@@ -34,6 +35,8 @@ static constexpr char APPLICATION_URI[] = "com.application.kzp";
 static constexpr char OFFAPP[] = "OffscreenApp";
 static constexpr char KZPAPP[] = "KZPController";
 static constexpr char KZIFACE[] = "KrakenZInterface";
+static constexpr char CPU_DEVICE[] = "CPU";
+static constexpr char GPU_DEVICE[] = "GPU";
 static constexpr char REASON[] = "C++ Instance only";
 
 int main(int argc, char *argv[])
@@ -51,6 +54,9 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<KrakenAppController>(APPLICATION_URI, 1, 0, OFFAPP, REASON);
     qmlRegisterUncreatableType<KZPController>(APPLICATION_URI, 1, 0, KZPAPP, REASON);
     qmlRegisterUncreatableType<KrakenZInterface>(APPLICATION_URI, 1, 0, KZIFACE, REASON);
+    qmlRegisterUncreatableType<KZPSensors::CPU>(APPLICATION_URI, 1, 0, CPU_DEVICE, REASON);
+    qmlRegisterUncreatableType<KZPSensors::GPU>(APPLICATION_URI, 1, 0, GPU_DEVICE, REASON);
+    qmlRegisterType<SensorMonitor>(APPLICATION_URI, 1, 0,  "SensorMonitor");
     QApplication app(argc, argv);
     app.setApplicationName("Kraken Z Playground");
     KZPController mainController(&app); // Application Business logic

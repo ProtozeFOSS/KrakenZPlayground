@@ -38,7 +38,6 @@ public:
     Q_INVOKABLE bool initialize(bool& permissionDenied) override;
     Q_INVOKABLE bool found() override { return mFound; }
     Q_INVOKABLE bool initialized() override { return mInitialized; }
-    Q_INVOKABLE void closeConnections();
     ~KrakenZDriver();
 
 
@@ -101,6 +100,7 @@ protected:
     short               mBufferIndex; // buffer index
     short               mImageIndex; // bucket id
     QTimer              mMeasure;
+    QTimer              mRepeatTimer;
     QImage              mImageOut;
     bool                mApplyAfterSet;
     bool                mWritingImage;
